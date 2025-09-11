@@ -17,3 +17,17 @@ Nuestro proyecto corresponde a una aplicacion cross-plataform que permite a los 
 ## Pila de Tecnología
 
 **Cliente:** Flutter, AndroidSDK
+
+mindmap
+  root((BarMap))
+    Todos los tragos
+      Lista de todos los tragos
+        Informacion del trago
+    Cocteles
+      Lista de combinaciones
+        Descripcion de cada trago
+    Destilados
+      Lista de destilados
+        Informacion de cada destilado
+    Añadir tragos
+        Formulario para añadir tragos
