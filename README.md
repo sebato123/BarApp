@@ -21,16 +21,19 @@ Nuestro proyecto corresponde a una aplicacion cross-plataform que permite a los 
 
 ```mermaid
 mindmap
-  root((BarMap))
+  root((Home))
     Todos los tragos
-      Lista de todos los tragos
-        Informacion del trago
-    Cocteles
-      Lista de combinaciones
-        Descripcion de cada trago
+      Lista de tragos
+      Descripción
+    Cócteles
+      Lista de cócteles
+      Descripción
     Destilados
       Lista de destilados
-        Informacion de cada destilado
-    Añadir tragos
-        Formulario para añadir tragos
+      Descripción
+    Mis recetas
+      Formulario para añadir tragos
+      Lista de recetas
+      Descripción
+
 ```
