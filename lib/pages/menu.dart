@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-
+import 'navegation/mis_recestas.dart';
+import 'navegation/cocteles.dart';
+import 'navegation/destilados.dart';
+import 'navegation/todos.dart';
 
 
 
@@ -67,7 +70,14 @@ class _MyMenuPageState extends State<Menu> {
           ),
                 const SizedBox(height: 8),
                   ElevatedButton.icon(
-                  onPressed: () {},
+                   onPressed: () {
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => Todos(),
+                        ),
+                      );
+                      },
                   icon: const Icon(Icons.wine_bar),
                   label: const Text("Todos los tragos"),
               ),
@@ -84,8 +94,13 @@ class _MyMenuPageState extends State<Menu> {
                 ),
                     ElevatedButton.icon(
                       onPressed: () {
-                        null;
-                        },
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => Cocteles(),
+                        ),
+                      );
+                      },
                           icon: const Icon(Icons.local_bar),
                           label: const Text("Cocteles"),
                     ),
@@ -101,8 +116,13 @@ class _MyMenuPageState extends State<Menu> {
                 ),
                     ElevatedButton.icon(
                       onPressed: () {
-                        null;
-                        },
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => Destilados(),
+                        ),
+                      );
+                      },
                       icon: const Icon(Icons.liquor),
                       label: const Text("Destilados"),
                     ),
@@ -117,7 +137,12 @@ class _MyMenuPageState extends State<Menu> {
           ),
                     ElevatedButton.icon(
                       onPressed: () {
-                        null;
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MisRecestas(),
+                        ),
+                      );
                         },
                       icon: const Icon(Icons.menu_book),
                       label: const Text("Mis recetas"),
