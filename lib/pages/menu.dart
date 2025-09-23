@@ -1,8 +1,5 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'navegation.dart';
-import 'splash_screen.dart';
 
 
 
