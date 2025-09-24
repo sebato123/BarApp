@@ -5,8 +5,8 @@ class Cocteles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
-   final items = [
+   
+    final items = [
       {
         "nombre": "Margarita",
         "descripcion": "Cóctel fresco con tequila, triple sec y lima.",
@@ -34,10 +34,7 @@ class Cocteles extends StatelessWidget {
           final it = items[i];
           return InkWell(
             onTap: () {
-              // Acción al clickear (para maqueta solo mostramos un snackbar)
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Abriste ${it["nombre"]}")),
-              );
+             null;
             },
             child: Card(
               shape: RoundedRectangleBorder(
@@ -46,18 +43,7 @@ class Cocteles extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    // Imagen cuadrada
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      /*
-                      child: Image.asset(
-                        it["imagen"]!,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                      ),
-                      */
-                    ),
+                    
                     const SizedBox(width: 12),
                     // Texto
                     Expanded(
@@ -65,12 +51,11 @@ class Cocteles extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(it["nombre"]!,
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(color: Color.fromARGB(255, 219, 223, 14), fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
                           Text(
                             it["descripcion"]!,
-                            style: const TextStyle(color: Colors.black54),
+                            style: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
                           ),
                         ],
                       ),

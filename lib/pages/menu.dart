@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'navegation/mis_recestas.dart';
+import 'navegation/mis_recetas.dart';
 import 'navegation/cocteles.dart';
 import 'navegation/destilados.dart';
 import 'navegation/todos.dart';
@@ -140,7 +140,7 @@ class _MyMenuPageState extends State<Menu> {
                         Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => MisRecestas(),
+                          builder: (_) => MisRecetas(),
                         ),
                       );
                         },
