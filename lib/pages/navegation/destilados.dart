@@ -100,7 +100,7 @@ class Destilados extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             it["descripcion"]!,
-                            style: const TextStyle(color: Colors.black87),
+                            style: const TextStyle(color: Color.fromARGB(221, 255, 255, 255)),
                           ),
                         ],
                       ),

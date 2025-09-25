@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
-class Todos extends StatelessWidget {
+class Todos extends StatefulWidget {
   const Todos({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final items = [
-      {
-        "nombre": "Margarita",
-        "descripcion": "Cóctel fresco con tequila, triple sec y lima.",
-        "detalle": """
+  State<Todos> createState() => _TodosState();
+}
+
+class _TodosState extends State<Todos> {
+  final List<Map<String, String>> items = [
+    {
+      "nombre": "Margarita",
+      "descripcion": "Cóctel fresco con tequila, triple sec y lima.",
+      "detalle": """
         • 50 ml tequila blanco
         • 25 ml triple sec (Cointreau)
         • 25 ml jugo de lima
@@ -17,42 +20,81 @@ class Todos extends StatelessWidget {
         • Borde de sal (opcional)
         Agitar con hielo y colar en copa fría.
         """,
-        "imagen": "assets/tragos/Margarita.png",
-      },
-      {
-        "nombre": "Negroni",
-        "descripcion": "Clásico italiano con gin, Campari y vermut.",
-        "detalle": """
+      "imagen": "assets/tragos/Margarita.png",
+    },
+    {
+      "nombre": "Negroni",
+      "descripcion": "Clásico italiano con gin, Campari y vermut.",
+      "detalle": """
         • 30 ml gin
         • 30 ml Campari
         • 30 ml vermut rosso
         • Hielos
         Remover en vaso con hielo y decorar con piel de naranja.
         """,
-        "imagen": "assets/tragos/Negroni.png",
-      },
-      {
-        "nombre": "Piscola",
-        "descripcion": "Coca-Cola con pisco, servido con hielo.",
-        "detalle": """
+      "imagen": "assets/tragos/Negroni.png",
+    },
+    {
+      "nombre": "Piscola",
+      "descripcion": "Coca-Cola con pisco, servido con hielo.",
+      "detalle": """
         • 50 ml pisco (40° aprox.)
         • 150–200 ml Coca-Cola (a gusto)
         • Hielo en vaso alto
         • Gajo de limón (opcional)
         Servir pisco sobre hielo y completar con cola.
         """,
-        "imagen": "assets/tragos/piscola.png",
-      },
-    ];
+      "imagen": "assets/tragos/piscola.png",
+    },
+  ];
+
+  String searchQuery = '';
+  bool isSearching = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredItems = items.where((item) {
+      final name = item['nombre']!.toLowerCase();
+      final desc = item['descripcion']!.toLowerCase();
+      final query = searchQuery.toLowerCase();
+      return name.contains(query) || desc.contains(query);
+    }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Cócteles")),
+      appBar: AppBar(
+        title: isSearching
+            ? TextField(
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Buscar cóctel...',
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                  });
+                },
+              )
+            : const Text("Cócteles"),
+        actions: [
+          IconButton(
+            icon: Icon(isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                isSearching = !isSearching;
+                if (!isSearching) searchQuery = '';
+              });
+            },
+          ),
+        ],
+      ),
       body: ListView.separated(
         padding: const EdgeInsets.all(12),
-        itemCount: items.length,
+        itemCount: filteredItems.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, i) {
-          final it = items[i];
+          final it = filteredItems[i];
           return InkWell(
             onTap: () {
               Navigator.push(
@@ -73,7 +115,6 @@ class Todos extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    // Miniatura cuadrada
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.asset(
@@ -84,7 +125,6 @@ class Todos extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Texto
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +140,7 @@ class Todos extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             it["descripcion"]!,
-                            style: const TextStyle(color: Colors.black87),
+                            style: const TextStyle(color: Colors.white),
                           ),
                         ],
                       ),
