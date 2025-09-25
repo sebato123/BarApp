@@ -76,7 +76,7 @@ class _TodosState extends State<Todos> {
                   });
                 },
               )
-            : const Text("Cócteles"),
+            : const Text("Todos los tragos"),
         actions: [
           IconButton(
             icon: Icon(isSearching ? Icons.close : Icons.search),
@@ -158,7 +158,7 @@ class _TodosState extends State<Todos> {
 }
 
 class DetalleCoctel extends StatelessWidget {
-  final String nombre;
+ final String nombre;
   final String descripcion;
   final String detalle;
   final String imagen;
@@ -183,14 +183,18 @@ class DetalleCoctel extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Imagen grande
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              imagen,
-              fit: BoxFit.cover,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                width: 8,
+                color: const Color.fromARGB(255, 0, 0, 0),
+              ),
             ),
+            child: Image.asset(imagen),
           ),
+        ),
           const SizedBox(height: 16),
           Text(descripcion, style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 16),
