@@ -37,3 +37,7 @@ mindmap
       Descripción
 
 ```
+
+
+
+Link al video: https://studio.youtube.com/video/Vqkdb-f8g7Y/edit
