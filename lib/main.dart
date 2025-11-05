@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'pages/splash_screen.dart';
 import 'pages/tema/theme.dart';
 import 'pages/tema/util.dart';
+import 'config.dart';
 
 void main() {
   runApp(const MyApp());
@@ -49,7 +50,10 @@ class MyApp extends StatelessWidget {
           displaySmall: GoogleFonts.pacifico(),
         ),
       ),
-      home: const SplashPage(),
+       home: const SplashPage(),
+  routes: {
+    '/settings': (_) => const SettingsPage(), 
+  }
     );
   }
 }

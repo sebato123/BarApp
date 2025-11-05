@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../config.dart';
+import '../../preferences.dart';
 
 class Cocteles extends StatefulWidget {
   const Cocteles({super.key});
@@ -9,7 +11,6 @@ class Cocteles extends StatefulWidget {
 
 class _CoctelesState extends State<Cocteles> {
   // ---------- Catálogo (prototipo) ----------
-  // Agregamos tags, herramientas y dificultad
   final List<Map<String, dynamic>> items = [
     {
       "nombre": "Margarita",
@@ -59,34 +60,41 @@ Servir pisco sobre hielo y completar con cola.
     },
   ];
 
-  // ---------- Estado de filtros ----------
+  // ---------- Estado de filtros (UI local) ----------
   String searchQuery = '';
   bool isSearching = false;
-
   final Set<String> selectedTags = {};
   final Set<String> selectedTools = {};
-
-  // Para simplificar el SegmentedButton, usamos string en vez de null
-  // "todas" | "fácil" | "intermedio" | "avanzado"
+  // UI local: 'todas' | 'fácil' | 'intermedio' | 'avanzado'
   String selectedDifficulty = "todas";
 
-  // ---------- Helpers de texto (búsqueda avanzada) ----------
+  // ---------- Preferencias globales ----------
+  bool _prefsLoaded = false;
+  bool hasBarKit = false;                 // switch en ajustes
+  String difficultyFilter = 'difícil';    // dropdown en ajustes: 'fácil' | 'intermedio' | 'difícil'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final kit = await AppPrefs.getHasBarKit();
+    final dif = await AppPrefs.getDifficultyFilter();
+    setState(() {
+      hasBarKit = kit;
+      difficultyFilter = dif;
+      _prefsLoaded = true;
+    });
+  }
+
+  // ---------- Helpers de búsqueda ----------
   String _normalize(String s) {
     const mapa = {
-      'á': 'a',
-      'é': 'e',
-      'í': 'i',
-      'ó': 'o',
-      'ú': 'u',
-      'ü': 'u',
-      'Á': 'a',
-      'É': 'e',
-      'Í': 'i',
-      'Ó': 'o',
-      'Ú': 'u',
-      'Ü': 'u',
-      'ñ': 'n',
-      'Ñ': 'n',
+      'á': 'a','é': 'e','í': 'i','ó': 'o','ú': 'u','ü': 'u',
+      'Á': 'a','É': 'e','Í': 'i','Ó': 'o','Ú': 'u','Ü': 'u',
+      'ñ': 'n','Ñ': 'n',
     };
     final sb = StringBuffer();
     for (final ch in s.trim().toLowerCase().runes) {
@@ -99,7 +107,6 @@ Servir pisco sobre hielo y completar con cola.
   List<String> _tokens(String s) =>
       _normalize(s).split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
 
-  // Distancia de Levenshtein simple (fuzzy leve)
   int _lev(String a, String b) {
     final m = a.length, n = b.length;
     if (m == 0) return n;
@@ -123,8 +130,7 @@ Servir pisco sobre hielo y completar con cola.
   bool _containsFuzzy(String haystack, String needle) {
     if (haystack.contains(needle)) return true;
     if (needle.length >= 4) {
-      final words =
-          haystack.split(RegExp(r'[^a-z0-9]+')).where((w) => w.isNotEmpty);
+      final words = haystack.split(RegExp(r'[^a-z0-9]+')).where((w) => w.isNotEmpty);
       for (final w in words) {
         if (_lev(w, needle) <= 1) return true;
       }
@@ -134,7 +140,18 @@ Servir pisco sobre hielo y completar con cola.
 
   // ---------- Lógica combinada de filtros ----------
   bool _passesFilters(Map<String, dynamic> it) {
-    // 1) Búsqueda avanzada (tokens AND, con fuzzy leve)
+    // 0) Preferencia global: kit bartender
+    if (!hasBarKit) {
+      final tools = Set<String>.from(it['herramientas'] ?? const [])
+          .map((e) => e.toString().toLowerCase())
+          .toSet();
+      const proTools = {
+        'coctelera','colador','vaso mezclador','medidor','jigger','strainer','mixing glass',
+      };
+      if (tools.intersection(proTools).isNotEmpty) return false;
+    }
+
+    // 1) Búsqueda avanzada
     final qTokens = _tokens(searchQuery);
     if (qTokens.isNotEmpty) {
       final blob = _normalize([
@@ -142,13 +159,12 @@ Servir pisco sobre hielo y completar con cola.
         it['descripcion'] ?? '',
         (it['tags'] ?? const []).join(' '),
       ].join(' '));
-
       for (final tok in qTokens) {
         if (!_containsFuzzy(blob, tok)) return false;
       }
     }
 
-    // 2) Etiquetas: deben incluir todas las seleccionadas
+    // 2) Etiquetas (AND)
     if (selectedTags.isNotEmpty) {
       final tags = Set<String>.from(it['tags'] ?? const []);
       for (final t in selectedTags) {
@@ -156,13 +172,21 @@ Servir pisco sobre hielo y completar con cola.
       }
     }
 
-    // 3) Herramientas: el cóctel debe poder prepararse con lo que marcó el usuario
+    // 3) Herramientas seleccionadas (subset)
     if (selectedTools.isNotEmpty) {
       final tools = Set<String>.from(it['herramientas'] ?? const []);
       if (!tools.containsAll(selectedTools)) return false;
     }
 
-    // 4) Dificultad
+    // 4a) Preferencia global de dificultad (tope máximo)
+    if (difficultyFilter != 'difícil') {
+      const niveles = {'fácil': 1, 'intermedio': 2, 'difícil': 3};
+      final maxLevel = niveles[difficultyFilter] ?? 3;
+      final itemLevel = niveles[(it['dificultad'] ?? 'fácil')] ?? 1;
+      if (itemLevel > maxLevel) return false;
+    }
+
+    // 4b) Filtro UI local (si el usuario elige uno específico en la pantalla)
     if (selectedDifficulty != "todas") {
       final dif = (it['dificultad'] ?? '').toString().toLowerCase();
       if (dif != selectedDifficulty) return false;
@@ -173,6 +197,13 @@ Servir pisco sobre hielo y completar con cola.
 
   @override
   Widget build(BuildContext context) {
+    if (!_prefsLoaded) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Cócteles')),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     // Catálogos dinámicos para chips
     final allTags = {
       for (final it in items) ...List<String>.from(it['tags'] ?? const [])
@@ -180,8 +211,7 @@ Servir pisco sobre hielo y completar con cola.
       ..sort();
 
     final allTools = {
-      for (final it in items)
-        ...List<String>.from(it['herramientas'] ?? const [])
+      for (final it in items) ...List<String>.from(it['herramientas'] ?? const [])
     }.toList()
       ..sort();
 
@@ -201,6 +231,27 @@ Servir pisco sobre hielo y completar con cola.
               )
             : const Text("Cócteles"),
         actions: [
+          // Botón ajustes
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Configuración',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              );
+              // recargar preferencias al volver
+              final kit = await AppPrefs.getHasBarKit();
+              final dif = await AppPrefs.getDifficultyFilter();
+              if (mounted) {
+                setState(() {
+                  hasBarKit = kit;
+                  difficultyFilter = dif;
+                });
+              }
+            },
+          ),
+          // Búsqueda
           IconButton(
             icon: Icon(isSearching ? Icons.close : Icons.search),
             onPressed: () {
@@ -214,13 +265,13 @@ Servir pisco sobre hielo y completar con cola.
       ),
       body: Column(
         children: [
-          // ---------- FILTROS ----------
+          // ---------- FILTROS (UI local) ----------
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Dificultad
+                // Dificultad (UI local)
                 Row(
                   children: [
                     const Text('Dificultad:'),
@@ -229,8 +280,7 @@ Servir pisco sobre hielo y completar con cola.
                       segments: const [
                         ButtonSegment(value: 'todas', label: Text('Todas')),
                         ButtonSegment(value: 'fácil', label: Text('Fácil')),
-                        ButtonSegment(
-                            value: 'intermedio', label: Text('Intermedio')),
+                        ButtonSegment(value: 'intermedio', label: Text('Intermedio')),
                         ButtonSegment(value: 'avanzado', label: Text('Avanzado')),
                       ],
                       selected: {selectedDifficulty},
@@ -242,7 +292,7 @@ Servir pisco sobre hielo y completar con cola.
                 ),
                 const SizedBox(height: 8),
 
-                // Tags
+                // Etiquetas
                 const Text('Etiquetas:'),
                 Wrap(
                   spacing: 8,
@@ -264,8 +314,8 @@ Servir pisco sobre hielo y completar con cola.
                 ),
                 const SizedBox(height: 8),
 
-                // Herramientas
-                const Text('Herramientas disponibles:'),
+                // Herramientas (usuario)
+                const Text('Herramientas disponibles (propias):'),
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
@@ -286,7 +336,6 @@ Servir pisco sobre hielo y completar con cola.
                 ),
                 const SizedBox(height: 8),
 
-                // Botón limpiar
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
@@ -331,8 +380,7 @@ Servir pisco sobre hielo y completar con cola.
                     );
                   },
                   child: Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Row(
@@ -341,9 +389,7 @@ Servir pisco sobre hielo y completar con cola.
                             borderRadius: BorderRadius.circular(8),
                             child: Image.asset(
                               it["imagen"] as String,
-                              width: 64,
-                              height: 64,
-                              fit: BoxFit.cover,
+                              width: 64, height: 64, fit: BoxFit.cover,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -429,10 +475,7 @@ class DetalleCoctel extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: Container(
               decoration: BoxDecoration(
-                border: Border.all(
-                  width: 8,
-                  color: const Color.fromARGB(255, 0, 0, 0),
-                ),
+                border: Border.all(width: 8, color: const Color.fromARGB(255, 0, 0, 0)),
               ),
               child: Image.asset(imagen),
             ),
