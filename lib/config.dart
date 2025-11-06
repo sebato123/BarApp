@@ -35,9 +35,11 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(v
-              ? 'Preferencia guardada: tienes kit de bartender ✅'
-              : 'Preferencia guardada: sin kit de bartender 🧊'),
+          content: Text(
+            v
+                ? 'Preferencia guardada: tienes kit de bartender'
+                : 'Preferencia guardada: sin kit de bartender',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -50,7 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await AppPrefs.setDifficultyFilter(value);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Dificultad preferida: $value guardada ✅'),
+        content: Text('Dificultad preferida: $value guardada'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -60,55 +62,81 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     if (loading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Configuración')),
+        appBar: AppBar(
+          title: const Text('Configuración', style: TextStyle(color: Colors.black87)),
+          backgroundColor: Colors.white,
+          iconTheme: const IconThemeData(color: Colors.black87),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Configuración')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SwitchListTile(
-            title: const Text('Tengo kit de bartender'),
-            subtitle: const Text(
-              'Coctelera, colador, vaso mezclador, jigger/medidor, etc.',
+      appBar: AppBar(
+        title: const Text('Configuración', style: TextStyle(color: Colors.black87)),
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
+      body: Container(
+        color: Colors.white,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SwitchListTile(
+              title: const Text(
+                'Tengo kit de bartender',
+                style: TextStyle(color: Colors.black87),
+              ),
+              subtitle: const Text(
+                'Coctelera, colador, vaso mezclador, jigger/medidor, etc.',
+                style: TextStyle(color: Colors.black54),
+              ),
+              value: hasBarKit,
+              activeColor: Colors.black,
+              onChanged: _toggleBarKit,
             ),
-            value: hasBarKit,
-            onChanged: _toggleBarKit,
-          ),
-          const Divider(),
-          const Text(
-            'Nivel de dificultad máximo a mostrar',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          DropdownButton<String>(
-            value: selectedDifficulty,
-            isExpanded: true,
-            items: const [
-              DropdownMenuItem(
-                value: 'fácil',
-                child: Text('Fácil — solo tragos sencillos'),
+            const SizedBox(height: 16),
+            const Text(
+              'Si no tienes kit, verás primero tragos simples que no requieren herramientas.',
+              style: TextStyle(
+                height: 1.3,
+                color: Colors.black87,
               ),
-              DropdownMenuItem(
-                value: 'intermedio',
-                child: Text('Intermedio — intermedios y fáciles'),
+            ),
+            const Divider(),
+            const Text(
+              'Nivel de dificultad máximo a mostrar',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
-              DropdownMenuItem(
-                value: 'difícil',
-                child: Text('Difícil — ver todos los tragos'),
-              ),
-            ],
-            onChanged: _changeDifficulty,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Si no tienes kit, verás primero tragos simples que no requieren herramientas.',
-            style: TextStyle(height: 1.3),
-          ),
-        ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String>(
+              value: selectedDifficulty,
+              isExpanded: true,
+              dropdownColor: Colors.white,
+              iconEnabledColor: Colors.black87,
+              style: const TextStyle(color: Colors.black87),
+              items: const [
+                DropdownMenuItem(
+                  value: 'fácil',
+                  child: Text('Fácil — solo tragos sencillos'),
+                ),
+                DropdownMenuItem(
+                  value: 'intermedio',
+                  child: Text('Intermedio — intermedios y fáciles'),
+                ),
+                DropdownMenuItem(
+                  value: 'difícil',
+                  child: Text('Difícil — ver todos los tragos'),
+                ),
+              ],
+              onChanged: _changeDifficulty,
+            ),
+            
+          ],
+        ),
       ),
     );
   }

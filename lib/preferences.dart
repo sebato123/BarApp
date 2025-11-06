@@ -20,7 +20,7 @@ class AppPrefs {
   // valores posibles: 'fácil', 'intermedio', 'difícil'
   static Future<String> getDifficultyFilter() async {
     final sp = await SharedPreferences.getInstance();
-    return sp.getString(_difficultyFilterKey) ?? 'difícil'; // por defecto ve todo
+    return sp.getString(_difficultyFilterKey) ?? 'difícil'; // ve todo
   }
 
   static Future<void> setDifficultyFilter(String value) async {

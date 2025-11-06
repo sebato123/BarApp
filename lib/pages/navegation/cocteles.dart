@@ -60,18 +60,16 @@ Servir pisco sobre hielo y completar con cola.
     },
   ];
 
-  // ---------- Estado de filtros (UI local) ----------
+  // ---------- Estado (UI local) ----------
   String searchQuery = '';
-  bool isSearching = false;
   final Set<String> selectedTags = {};
-  final Set<String> selectedTools = {};
-  // UI local: 'todas' | 'fácil' | 'intermedio' | 'avanzado'
+  // 'todas' | 'fácil' | 'intermedio' | 'avanzado'
   String selectedDifficulty = "todas";
 
   // ---------- Preferencias globales ----------
   bool _prefsLoaded = false;
-  bool hasBarKit = false;                 // switch en ajustes
-  String difficultyFilter = 'difícil';    // dropdown en ajustes: 'fácil' | 'intermedio' | 'difícil'
+  bool hasBarKit = false;              // switch en ajustes
+  String difficultyFilter = 'difícil'; // ajustes: 'fácil' | 'intermedio' | 'difícil'
 
   @override
   void initState() {
@@ -151,7 +149,7 @@ Servir pisco sobre hielo y completar con cola.
       if (tools.intersection(proTools).isNotEmpty) return false;
     }
 
-    // 1) Búsqueda avanzada
+    // 1) Búsqueda por texto
     final qTokens = _tokens(searchQuery);
     if (qTokens.isNotEmpty) {
       final blob = _normalize([
@@ -172,13 +170,7 @@ Servir pisco sobre hielo y completar con cola.
       }
     }
 
-    // 3) Herramientas seleccionadas (subset)
-    if (selectedTools.isNotEmpty) {
-      final tools = Set<String>.from(it['herramientas'] ?? const []);
-      if (!tools.containsAll(selectedTools)) return false;
-    }
-
-    // 4a) Preferencia global de dificultad (tope máximo)
+    // 3) Dificultad global (tope máximo)
     if (difficultyFilter != 'difícil') {
       const niveles = {'fácil': 1, 'intermedio': 2, 'difícil': 3};
       final maxLevel = niveles[difficultyFilter] ?? 3;
@@ -186,13 +178,121 @@ Servir pisco sobre hielo y completar con cola.
       if (itemLevel > maxLevel) return false;
     }
 
-    // 4b) Filtro UI local (si el usuario elige uno específico en la pantalla)
+    // 4) Dificultad UI local (si el usuario eligió una específica)
     if (selectedDifficulty != "todas") {
       final dif = (it['dificultad'] ?? '').toString().toLowerCase();
       if (dif != selectedDifficulty) return false;
     }
 
     return true;
+  }
+
+  // ---------- Bottom sheet unificado: búsqueda + dificultad + etiquetas ----------
+  void _openSearchAndFilterSheet(List<String> allTags) {
+    final tempTags = {...selectedTags};
+    String tempDifficulty = selectedDifficulty;
+    String tempQuery = searchQuery;
+    final controller = TextEditingController(text: tempQuery);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16, right: 16, top: 8,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: StatefulBuilder(
+            builder: (ctx, setModalState) {
+              return SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Buscar y filtrar',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 17, 17, 17),)),
+                    const SizedBox(height: 12),
+                    
+
+                    // Campo de búsqueda
+                    TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText: 'Escribe un nombre, sabor, etc.',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (v) => setModalState(() => tempQuery = v),
+                    ),
+
+                    const SizedBox(height: 16),
+                    
+
+                    const SizedBox(height: 16),
+                    const Text('Etiquetas',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Color.fromARGB(255, 17, 17, 17),)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        for (final tag in allTags)
+                          FilterChip(
+                            label: Text(tag),
+                            selected: tempTags.contains(tag),
+                            onSelected: (sel) {
+                              setModalState(() {
+                                if (sel) {
+                                  tempTags.add(tag);
+                                } else {
+                                  tempTags.remove(tag);
+                                }
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedTags.clear();
+                              selectedDifficulty = 'todas';
+                              searchQuery = '';
+                            });
+                            Navigator.pop(ctx);
+                          },
+                          child: const Text('Limpiar'),
+                        ),
+                        const Spacer(),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              selectedTags
+                                ..clear()
+                                ..addAll(tempTags);
+                              selectedDifficulty = tempDifficulty;
+                              searchQuery = tempQuery;
+                            });
+                            Navigator.pop(ctx);
+                          },
+                          icon: const Icon(Icons.check),
+                          label: const Text('Aplicar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -204,14 +304,9 @@ Servir pisco sobre hielo y completar con cola.
       );
     }
 
-    // Catálogos dinámicos para chips
+    // Catálogo de etiquetas (para el sheet)
     final allTags = {
       for (final it in items) ...List<String>.from(it['tags'] ?? const [])
-    }.toList()
-      ..sort();
-
-    final allTools = {
-      for (final it in items) ...List<String>.from(it['herramientas'] ?? const [])
     }.toList()
       ..sort();
 
@@ -219,19 +314,9 @@ Servir pisco sobre hielo y completar con cola.
 
     return Scaffold(
       appBar: AppBar(
-        title: isSearching
-            ? TextField(
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Buscar cóctel…',
-                  border: InputBorder.none,
-                ),
-                style: const TextStyle(color: Colors.white, fontSize: 18),
-                onChanged: (value) => setState(() => searchQuery = value),
-              )
-            : const Text("Cócteles"),
+        title: const Text("Cócteles"),
         actions: [
-          // Botón ajustes
+          // Ajustes (si lo usas desde aquí)
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Configuración',
@@ -251,195 +336,92 @@ Servir pisco sobre hielo y completar con cola.
               }
             },
           ),
-          // Búsqueda
+          // Búsqueda + filtros unificados
           IconButton(
-            icon: Icon(isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                isSearching = !isSearching;
-                if (!isSearching) searchQuery = '';
-              });
-            },
+            icon: const Icon(Icons.search),
+            tooltip: 'Buscar y filtrar',
+            onPressed: () => _openSearchAndFilterSheet(allTags),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // ---------- FILTROS (UI local) ----------
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Dificultad (UI local)
-                Row(
-                  children: [
-                    const Text('Dificultad:'),
-                    const SizedBox(width: 8),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'todas', label: Text('Todas')),
-                        ButtonSegment(value: 'fácil', label: Text('Fácil')),
-                        ButtonSegment(value: 'intermedio', label: Text('Intermedio')),
-                        ButtonSegment(value: 'avanzado', label: Text('Avanzado')),
-                      ],
-                      selected: {selectedDifficulty},
-                      onSelectionChanged: (set) {
-                        setState(() => selectedDifficulty = set.first);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Etiquetas
-                const Text('Etiquetas:'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final tag in allTags)
-                      FilterChip(
-                        label: Text(tag),
-                        selected: selectedTags.contains(tag),
-                        onSelected: (sel) => setState(() {
-                          if (sel) {
-                            selectedTags.add(tag);
-                          } else {
-                            selectedTags.remove(tag);
-                          }
-                        }),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Herramientas (usuario)
-                const Text('Herramientas disponibles (propias):'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final tool in allTools)
-                      FilterChip(
-                        label: Text(tool),
-                        selected: selectedTools.contains(tool),
-                        onSelected: (sel) => setState(() {
-                          if (sel) {
-                            selectedTools.add(tool);
-                          } else {
-                            selectedTools.remove(tool);
-                          }
-                        }),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () => setState(() {
-                      selectedTags.clear();
-                      selectedTools.clear();
-                      selectedDifficulty = "todas";
-                      searchQuery = '';
-                      isSearching = false;
-                    }),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Limpiar filtros'),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(12),
+        itemCount: filteredItems.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, i) {
+          final it = filteredItems[i];
+          return InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetalleCoctel(
+                    nombre: it["nombre"] as String,
+                    descripcion: it["descripcion"] as String,
+                    detalle: it["detalle"] as String,
+                    imagen: it["imagen"] as String,
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // ---------- LISTA ----------
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(12),
-              itemCount: filteredItems.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, i) {
-                final it = filteredItems[i];
-
-                return InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DetalleCoctel(
-                          nombre: it["nombre"] as String,
-                          descripcion: it["descripcion"] as String,
-                          detalle: it["detalle"] as String,
-                          imagen: it["imagen"] as String,
-                        ),
+              );
+            },
+            child: Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        it["imagen"] as String,
+                        width: 64, height: 64, fit: BoxFit.cover,
                       ),
-                    );
-                  },
-                  child: Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.asset(
-                              it["imagen"] as String,
-                              width: 64, height: 64, fit: BoxFit.cover,
+                          Text(
+                            it["nombre"] as String,
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  it["nombre"] as String,
-                                  style: const TextStyle(
-                                    color: Color.fromARGB(255, 219, 223, 14),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  it["descripcion"] as String,
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: -8,
-                                  children: [
-                                    if (it['dificultad'] != null)
-                                      Chip(
-                                        label: Text("${it['dificultad']}"),
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                    for (final t in (it['tags'] ?? const []))
-                                      Chip(
-                                        label: Text("$t"),
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            it["descripcion"] as String,
+                            style: const TextStyle(color: Color.fromARGB(255, 17, 17, 17)),
                           ),
-                          const Icon(Icons.chevron_right),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: -8,
+                            children: [
+                              if (it['dificultad'] != null)
+                                Chip(
+                                  label: Text("${it['dificultad']}"),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              for (final t in (it['tags'] ?? const []))
+                                Chip(
+                                  label: Text("$t"),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                );
-              },
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -465,7 +447,7 @@ class DetalleCoctel extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           nombre,
-          style: const TextStyle(color: Color.fromARGB(255, 219, 223, 14)),
+          style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
         ),
       ),
       body: ListView(
@@ -481,18 +463,29 @@ class DetalleCoctel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text(descripcion, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(
+            descripcion,
+            style: const TextStyle(fontSize: 16, color: Color.fromARGB(255, 17, 17, 17)),
+          ),
           const SizedBox(height: 16),
           const Text(
             "Medidas",
             style: TextStyle(
-              color: Color.fromARGB(255, 219, 223, 14),
+              color: Color.fromARGB(255, 0, 0, 0),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
-          Text(detalle, style: const TextStyle(fontSize: 16, height: 1.4)),
+          Text(
+            detalle,
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.4,
+              color: Color.fromARGB(255, 17, 17, 17),
+            ),
+          ),
         ],
       ),
     );
