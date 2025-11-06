@@ -16,12 +16,12 @@ class _CoctelesState extends State<Cocteles> {
       "nombre": "Margarita",
       "descripcion": "Cóctel fresco con tequila, triple sec y lima.",
       "detalle": """
-• 50 ml tequila blanco
-• 25 ml triple sec (Cointreau)
-• 25 ml jugo de lima
-• Hielos
-• Borde de sal (opcional)
-Agitar con hielo y colar en copa fría.
+        • 50 ml tequila blanco
+        • 25 ml triple sec (Cointreau)
+        • 25 ml jugo de lima
+        • Hielos
+        • Borde de sal (opcional)
+        Agitar con hielo y colar en copa fría.
 """,
       "imagen": "assets/tragos/Margarita.png",
       "tags": ["cítrico", "clásico"],
@@ -32,11 +32,11 @@ Agitar con hielo y colar en copa fría.
       "nombre": "Negroni",
       "descripcion": "Clásico italiano con gin, Campari y vermut.",
       "detalle": """
-• 30 ml gin
-• 30 ml Campari
-• 30 ml vermut rosso
-• Hielos
-Remover en vaso con hielo y decorar con piel de naranja.
+          • 30 ml gin
+          • 30 ml Campari
+          • 30 ml vermut rosso
+          • Hielos
+          Remover en vaso con hielo y decorar con piel de naranja.
 """,
       "imagen": "assets/tragos/Negroni.png",
       "tags": ["amargo", "clásico"],
@@ -47,11 +47,11 @@ Remover en vaso con hielo y decorar con piel de naranja.
       "nombre": "Piscola",
       "descripcion": "Coca-Cola con pisco, servido con hielo.",
       "detalle": """
-• 50 ml pisco (40° aprox.)
-• 150–200 ml Coca-Cola (a gusto)
-• Hielo en vaso alto
-• Gajo de limón (opcional)
-Servir pisco sobre hielo y completar con cola.
+        • 50 ml pisco (40° aprox.)
+        • 150–200 ml Coca-Cola (a gusto)
+        • Hielo en vaso alto
+        • Gajo de limón (opcional)
+        Servir pisco sobre hielo y completar con cola.
 """,
       "imagen": "assets/tragos/piscola.png",
       "tags": ["rápido", "refrescante"],
@@ -211,7 +211,7 @@ Servir pisco sobre hielo y completar con cola.
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Buscar y filtrar',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 17, 17, 17),)),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 252, 252, 252),)),
                     const SizedBox(height: 12),
                     
 
@@ -231,7 +231,7 @@ Servir pisco sobre hielo y completar con cola.
 
                     const SizedBox(height: 16),
                     const Text('Etiquetas',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Color.fromARGB(255, 17, 17, 17),)),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Color.fromARGB(255, 253, 252, 252),)),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
@@ -385,7 +385,7 @@ Servir pisco sobre hielo y completar con cola.
                           Text(
                             it["nombre"] as String,
                             style: const TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
+                              color: Color.fromARGB(255, 245, 244, 244),
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -393,7 +393,7 @@ Servir pisco sobre hielo y completar con cola.
                           const SizedBox(height: 4),
                           Text(
                             it["descripcion"] as String,
-                            style: const TextStyle(color: Color.fromARGB(255, 17, 17, 17)),
+                            style: const TextStyle(color: Color.fromARGB(255, 244, 244, 244)),
                           ),
                           const SizedBox(height: 6),
                           Wrap(
@@ -447,7 +447,7 @@ class DetalleCoctel extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           nombre,
-          style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+          style: const TextStyle(color: Color.fromARGB(255, 253, 253, 253)),
         ),
       ),
       body: ListView(
@@ -457,7 +457,7 @@ class DetalleCoctel extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: Container(
               decoration: BoxDecoration(
-                border: Border.all(width: 8, color: const Color.fromARGB(255, 0, 0, 0)),
+                border: Border.all(width: 8, color: const Color.fromARGB(255, 237, 236, 236)),
               ),
               child: Image.asset(imagen),
             ),
@@ -466,13 +466,13 @@ class DetalleCoctel extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             descripcion,
-            style: const TextStyle(fontSize: 16, color: Color.fromARGB(255, 17, 17, 17)),
+            style: const TextStyle(fontSize: 16, color: Color.fromARGB(255, 254, 254, 254)),
           ),
           const SizedBox(height: 16),
           const Text(
             "Medidas",
             style: TextStyle(
-              color: Color.fromARGB(255, 0, 0, 0),
+              color: Color.fromARGB(255, 253, 253, 253),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -483,7 +483,7 @@ class DetalleCoctel extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               height: 1.4,
-              color: Color.fromARGB(255, 17, 17, 17),
+              color: Color.fromARGB(255, 248, 247, 247),
             ),
           ),
         ],
