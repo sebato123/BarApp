@@ -1,136 +1,197 @@
-const List<Map<String, dynamic>> catalogoTragos = [
-  {
-    "nombre": "Margarita",
-    "descripcion": "Cóctel fresco y cítrico con tequila, triple sec y jugo de lima.",
-    "detalle": """
-Ingredientes:
-• 50 ml de tequila blanco (reposado si prefieres más cuerpo)
-• 25 ml de triple sec (Cointreau)
-• 25 ml de jugo de lima natural
-• Hielos
-• Sal gruesa para el borde (opcional)
-• Rodaja de lima para decorar
+class Trago {
+  final int id;
+  final String url;
+  final String name;
+  final String type;
+  final String language;
+  final List<String> genres;
+  final String status;
+  final int? runtime;
+  final int? averageRuntime;
+  final String? premiered;
+  final String? ended;
+  final String? officialSite;
+  final Schedule? schedule;
+  final Rating? rating;
+  final int weight;
+  final Network? network;
+  final dynamic webChannel;
+  final dynamic dvdCountry;
+  final Externals? externals;
+  final MediaImage? image;
+  final String? summary;
+  final int updated;
+  final MediaLinks? links;
 
-Preparación (requiere kit de bartender):
-1. En una coctelera agrega el tequila, triple sec y jugo de lima.
-2. Añade hielo y agita enérgicamente durante unos 15 segundos.
-3. Humedece el borde de una copa margarita con una rodaja de lima y pásalo por sal.
-4. Cuela el cóctel usando un colador fino o de gusanillo y sirve sin hielo.
-5. Decora con una rodaja de lima o una pequeña cáscara en espiral.
+  Trago({
+    required this.id,
+    required this.url,
+    required this.name,
+    required this.type,
+    required this.language,
+    required this.genres,
+    required this.status,
+    this.runtime,
+    this.averageRuntime,
+    this.premiered,
+    this.ended,
+    this.officialSite,
+    this.schedule,
+    this.rating,
+    required this.weight,
+    this.network,
+    this.webChannel,
+    this.dvdCountry,
+    this.externals,
+    this.image,
+    this.summary,
+    required this.updated,
+    this.links,
+  });
 
-Consejo:
-• Si no tienes coctelera, usa un frasco con tapa y cuela con un colador de cocina.
-""",
-    "imagen": "assets/tragos/Margarita.png",
-    "tags": ["cítrico", "clásico", "refrescante"],
-    "herramientas": ["coctelera", "colador", "medidor"],
-    "dificultad": "intermedio",
-  },
-  {
-    "nombre": "Negroni",
-    "descripcion": "Cóctel italiano clásico, equilibrado entre amargo y dulce.",
-    "detalle": """
-Ingredientes:
-• 30 ml de gin
-• 30 ml de Campari
-• 30 ml de vermut rosso (rojo dulce)
-• Hielos
-• Piel de naranja para decorar
+  factory Trago.fromJson(Map<String, dynamic> json) {
+    return Trago(
+      id: json['id'],
+      url: json['url'],
+      name: json['name'],
+      type: json['type'],
+      language: json['language'],
+      genres: List<String>.from(json['genres'] ?? []),
+      status: json['status'],
+      runtime: json['runtime'],
+      averageRuntime: json['averageRuntime'],
+      premiered: json['premiered'],
+      ended: json['ended'],
+      officialSite: json['officialSite'],
+      schedule: json['schedule'] != null ? Schedule.fromJson(json['schedule']) : null,
+      rating: json['rating'] != null ? Rating.fromJson(json['rating']) : null,
+      weight: json['weight'],
+      network: json['network'] != null ? Network.fromJson(json['network']) : null,
+      webChannel: json['webChannel'],
+      dvdCountry: json['dvdCountry'],
+      externals: json['externals'] != null ? Externals.fromJson(json['externals']) : null,
+      image: json['image'] != null ? MediaImage.fromJson(json['image']) : null,
+      summary: json['summary'],
+      updated: json['updated'],
+      links: json['_links'] != null ? MediaLinks.fromJson(json['_links']) : null,
+    );
+  }
+}
 
-Preparación (no requiere coctelera):
-1. En un vaso mezclador o directamente en un vaso corto, añade el gin, Campari y vermut.
-2. Agrega bastante hielo y remueve suavemente con una cuchara por unos 20 segundos.
-3. Cuela si deseas una textura más limpia o deja el hielo dentro para servir tipo “on the rocks”.
-4. Exprime la piel de naranja sobre la superficie del cóctel para liberar aceites esenciales.
-5. Decora con la piel o una rodaja fina de naranja.
+class Schedule {
+  final String time;
+  final List<String> days;
 
-Consejo:
-• Puedes ajustar la amargura variando la proporción de Campari (menos para un sabor más suave).
-""",
-    "imagen": "assets/tragos/Negroni.png",
-    "tags": ["amargo", "clásico", "aperitivo"],
-    "herramientas": ["cuchara", "vaso mezclador", "medidor"],
-    "dificultad": "fácil",
-  },
-  {
-    "nombre": "Piscola",
-    "descripcion": "Mezcla tradicional chilena de pisco con Coca-Cola, simple y rápida.",
-    "detalle": """
-Ingredientes:
-• 50 ml de pisco (de 35° a 40° según gusto)
-• 150–200 ml de Coca-Cola o bebida cola
-• Hielo en cubos
-• Gajo o rodaja de limón (opcional)
+  Schedule({required this.time, required this.days});
 
-Preparación (sin herramientas especiales):
-1. Llena un vaso alto con hielo hasta la mitad.
-2. Sirve el pisco directamente sobre los hielos.
-3. Añade Coca-Cola hasta llenar el vaso.
-4. Remueve suavemente con una cuchara larga para integrar.
-5. Si deseas, exprime un gajo de limón para un toque ácido.
+  factory Schedule.fromJson(Map<String, dynamic> json) {
+    return Schedule(
+      time: json['time'],
+      days: List<String>.from(json['days'] ?? []),
+    );
+  }
+}
 
-Consejo:
-• Usa un pisco aromático para más carácter, o uno transparente para un sabor más limpio.
-""",
-    "imagen": "assets/tragos/piscola.png",
-    "tags": ["rápido", "refrescante", "chileno"],
-    "herramientas": ["vaso alto"],
-    "dificultad": "fácil",
-  },
-  {
-    "nombre": "Whiskey Sour",
-    "descripcion": "Cóctel ácido y elegante con whiskey, jugo de limón y clara de huevo.",
-    "detalle": """
-Ingredientes:
-• 60 ml de whiskey bourbon
-• 25 ml de jugo de limón natural
-• 20 ml de jarabe de azúcar (simple)
-• 1 clara de huevo (opcional, da textura cremosa)
-• Hielo
-• Cereza o rodaja de naranja para decorar
+class Rating {
+  final double? average;
 
-Preparación (requiere kit de bartender):
-1. En una coctelera sin hielo, combina el whiskey, jugo de limón, jarabe y la clara.
-2. Agita vigorosamente (dry shake) durante 10 segundos para emulsionar.
-3. Agrega hielo y vuelve a agitar otros 15 segundos.
-4. Cuela en un vaso corto con hielo fresco.
-5. Decora con una cereza o rodaja fina de naranja.
+  Rating({this.average});
 
-Consejo:
-• Si no tienes coctelera, usa una botella o jarro con tapa. 
-• Si prefieres evitar huevo, usa espuma de aquafaba o simplemente omítelo.
-""",
-    "imagen": "assets/tragos/WhiskeySour.png",
-    "tags": ["ácido", "clásico", "espumoso"],
-    "herramientas": ["coctelera", "colador", "medidor"],
-    "dificultad": "avanzado",
-  },
-  {
-    "nombre": "Mojito",
-    "descripcion": "Refrescante cóctel cubano a base de ron, menta y limón.",
-    "detalle": """
-Ingredientes:
-• 50 ml de ron blanco
-• 6 hojas de menta o hierbabuena
-• 2 cucharaditas de azúcar
-• 25 ml de jugo de limón
-• Agua con gas o soda
-• Hielo picado o en cubos
+  factory Rating.fromJson(Map<String, dynamic> json) {
+    return Rating(
+      average: (json['average'] != null) ? (json['average'] as num).toDouble() : null,
+    );
+  }
+}
 
-Preparación (puedes hacerlo sin kit):
-1. Coloca las hojas de menta y el azúcar en un vaso alto.
-2. Machaca ligeramente con una cuchara o mortero (sin romper las hojas).
-3. Agrega el jugo de limón y el ron.
-4. Añade hielo y completa con soda.
-5. Remueve suavemente y decora con una ramita de menta.
+class Network {
+  final int id;
+  final String name;
+  final Country? country;
+  final String? officialSite;
 
-Consejo:
-• Si tienes medidor (jigger), podrás mantener el balance ideal entre dulzor y acidez.
-• Evita triturar en exceso la menta para no liberar sabores amargos.
-""",
-    "imagen": "assets/tragos/Mojito.png",
-    "tags": ["refrescante", "menta", "caribeño"],
-    "herramientas": ["vaso alto", "cuchara", "medidor"],
-    "dificultad": "intermedio",
-  },
-];
+  Network({required this.id, required this.name, this.country, this.officialSite});
+
+  factory Network.fromJson(Map<String, dynamic> json) {
+    return Network(
+      id: json['id'],
+      name: json['name'],
+      country: json['country'] != null ? Country.fromJson(json['country']) : null,
+      officialSite: json['officialSite'],
+    );
+  }
+}
+
+class Country {
+  final String name;
+  final String code;
+  final String timezone;
+
+  Country({required this.name, required this.code, required this.timezone});
+
+  factory Country.fromJson(Map<String, dynamic> json) {
+    return Country(
+      name: json['name'],
+      code: json['code'],
+      timezone: json['timezone'],
+    );
+  }
+}
+
+class Externals {
+  final int? tvrage;
+  final int? thetvdb;
+  final String? imdb;
+
+  Externals({this.tvrage, this.thetvdb, this.imdb});
+
+  factory Externals.fromJson(Map<String, dynamic> json) {
+    return Externals(
+      tvrage: json['tvrage'],
+      thetvdb: json['thetvdb'],
+      imdb: json['imdb'],
+    );
+  }
+}
+
+class MediaImage {
+  final String? medium;
+  final String? original;
+
+  MediaImage({this.medium, this.original});
+
+  factory MediaImage.fromJson(Map<String, dynamic> json) {
+    return MediaImage(
+      medium: json['medium'],
+      original: json['original'],
+    );
+  }
+}
+
+class MediaLinks {
+  final Link self;
+  final Link? previousepisode;
+
+  MediaLinks({required this.self, this.previousepisode});
+
+  factory MediaLinks.fromJson(Map<String, dynamic> json) {
+    return MediaLinks(
+      self: Link.fromJson(json['self']),
+      previousepisode: json['previousepisode'] != null ? Link.fromJson(json['previousepisode']) : null,
+    );
+  }
+}
+
+class Link {
+  final String href;
+  final String? name;
+
+  Link({required this.href, this.name});
+
+  factory Link.fromJson(Map<String, dynamic> json) {
+    return Link(
+      href: json['href'],
+      name: json['name'],
+    );
+  }
+}
