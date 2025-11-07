@@ -1,93 +1,70 @@
 import 'package:flutter/material.dart';
 import '../../config.dart';
 import '../../preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../api/api_service.dart';
 
 class Cocteles extends StatefulWidget {
   const Cocteles({super.key});
-
   @override
   State<Cocteles> createState() => _CoctelesState();
 }
 
 class _CoctelesState extends State<Cocteles> {
-  // ---------- Catálogo (prototipo) ----------
-  final List<Map<String, dynamic>> items = [
-    {
-      "nombre": "Margarita",
-      "descripcion": "Cóctel fresco con tequila, triple sec y lima.",
-      "detalle": """
-        • 50 ml tequila blanco
-        • 25 ml triple sec (Cointreau)
-        • 25 ml jugo de lima
-        • Hielos
-        • Borde de sal (opcional)
-        Agitar con hielo y colar en copa fría.
-""",
-      "imagen": "assets/tragos/Margarita.png",
-      "tags": ["cítrico", "clásico"],
-      "herramientas": ["coctelera", "colador", "medidor"],
-      "dificultad": "intermedio",
-    },
-    {
-      "nombre": "Negroni",
-      "descripcion": "Clásico italiano con gin, Campari y vermut.",
-      "detalle": """
-          • 30 ml gin
-          • 30 ml Campari
-          • 30 ml vermut rosso
-          • Hielos
-          Remover en vaso con hielo y decorar con piel de naranja.
-""",
-      "imagen": "assets/tragos/Negroni.png",
-      "tags": ["amargo", "clásico"],
-      "herramientas": ["cuchara", "vaso mezclador", "medidor"],
-      "dificultad": "fácil",
-    },
-    {
-      "nombre": "Piscola",
-      "descripcion": "Coca-Cola con pisco, servido con hielo.",
-      "detalle": """
-        • 50 ml pisco (40° aprox.)
-        • 150–200 ml Coca-Cola (a gusto)
-        • Hielo en vaso alto
-        • Gajo de limón (opcional)
-        Servir pisco sobre hielo y completar con cola.
-""",
-      "imagen": "assets/tragos/piscola.png",
-      "tags": ["rápido", "refrescante"],
-      "herramientas": ["vaso alto"],
-      "dificultad": "fácil",
-    },
-  ];
+  final _api = CocktailApi();
 
-  // ---------- Estado (UI local) ----------
+  // Catálogo solo API
+  final List<Map<String, dynamic>> _catalog = [];
+
+  // Estado filtros
   String searchQuery = '';
-  final Set<String> selectedTags = {};
-  // 'todas' | 'fácil' | 'intermedio' | 'avanzado'
-  String selectedDifficulty = "todas";
+  // Usaremos este set para guardar los licores base seleccionados (chips)
+  final Set<String> selectedBaseLiquors = {};
 
-  // ---------- Preferencias globales ----------
+  // Preferencias globales
   bool _prefsLoaded = false;
-  bool hasBarKit = false;              // switch en ajustes
-  String difficultyFilter = 'difícil'; // ajustes: 'fácil' | 'intermedio' | 'difícil'
+  bool hasBarKit = false;
+  String difficultyFilter = 'difícil';
+
+  bool _loading = true;
+
+  // Chips fijos de licor base (en español)
+  static const List<String> _licorBaseChips = [
+    'vodka',
+    'ginebra',
+    'ron',
+    'tequila',
+    'mezcal',
+    'whisky',
+    'bourbon',
+    'pisco',
+    'brandy',
+    'coñac',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadPrefs();
+    _init();
   }
 
-  Future<void> _loadPrefs() async {
+  Future<void> _init() async {
     final kit = await AppPrefs.getHasBarKit();
     final dif = await AppPrefs.getDifficultyFilter();
+    // Catálogo grande inicial (ajusta letras si quieres más/menos)
+    final data = await _api.searchByLettersBatch(['a','e','m','p','s','n','r']);
     setState(() {
       hasBarKit = kit;
       difficultyFilter = dif;
       _prefsLoaded = true;
+      _catalog
+        ..clear()
+        ..addAll(data);
+      _loading = false;
     });
   }
 
-  // ---------- Helpers de búsqueda ----------
+  // -------- Helpers búsqueda --------
   String _normalize(String s) {
     const mapa = {
       'á': 'a','é': 'e','í': 'i','ó': 'o','ú': 'u','ü': 'u',
@@ -136,61 +113,56 @@ class _CoctelesState extends State<Cocteles> {
     return false;
   }
 
-  // ---------- Lógica combinada de filtros ----------
+  // -------- Filtros --------
   bool _passesFilters(Map<String, dynamic> it) {
-    // 0) Preferencia global: kit bartender
-    if (!hasBarKit) {
-      final tools = Set<String>.from(it['herramientas'] ?? const [])
-          .map((e) => e.toString().toLowerCase())
-          .toSet();
-      const proTools = {
-        'coctelera','colador','vaso mezclador','medidor','jigger','strainer','mixing glass',
-      };
-      if (tools.intersection(proTools).isNotEmpty) return false;
-    }
-
-    // 1) Búsqueda por texto
+    // 1) Texto
     final qTokens = _tokens(searchQuery);
     if (qTokens.isNotEmpty) {
       final blob = _normalize([
         it['nombre'] ?? '',
         it['descripcion'] ?? '',
         (it['tags'] ?? const []).join(' '),
+        (it['ingredientes'] ?? const []).join(' '),
       ].join(' '));
       for (final tok in qTokens) {
         if (!_containsFuzzy(blob, tok)) return false;
       }
     }
 
-    // 2) Etiquetas (AND)
-    if (selectedTags.isNotEmpty) {
-      final tags = Set<String>.from(it['tags'] ?? const []);
-      for (final t in selectedTags) {
-        if (!tags.contains(t)) return false;
-      }
+    // 2) Chips de licor base (OR: basta con que tenga al menos uno)
+    if (selectedBaseLiquors.isNotEmpty) {
+      final tags = (it['tags'] as List? ?? const []).map((e) => e.toString().toLowerCase()).toSet();
+      final want = selectedBaseLiquors.map((e) => e.toLowerCase()).toSet();
+      if (tags.intersection(want).isEmpty) return false;
     }
 
-    // 3) Dificultad global (tope máximo)
+    // 3) Dificultad tope desde preferencias (fácil/intermedio/difícil)
     if (difficultyFilter != 'difícil') {
-      const niveles = {'fácil': 1, 'intermedio': 2, 'difícil': 3};
+      const niveles = {'fácil': 1, 'intermedio': 2, 'avanzado': 3, 'difícil': 3};
       final maxLevel = niveles[difficultyFilter] ?? 3;
       final itemLevel = niveles[(it['dificultad'] ?? 'fácil')] ?? 1;
       if (itemLevel > maxLevel) return false;
     }
 
-    // 4) Dificultad UI local (si el usuario eligió una específica)
-    if (selectedDifficulty != "todas") {
-      final dif = (it['dificultad'] ?? '').toString().toLowerCase();
-      if (dif != selectedDifficulty) return false;
-    }
-
     return true;
   }
 
-  // ---------- Bottom sheet unificado: búsqueda + dificultad + etiquetas ----------
-  void _openSearchAndFilterSheet(List<String> allTags) {
-    final tempTags = {...selectedTags};
-    String tempDifficulty = selectedDifficulty;
+  // -------- UI --------
+  Widget _thumb(String path) {
+    if (path.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: path,
+        width: 64, height: 64, fit: BoxFit.cover,
+        placeholder: (_, __) => const SizedBox(
+          width: 64, height: 64, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+        errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
+      );
+    }
+    return Image.asset(path, width: 64, height: 64, fit: BoxFit.cover);
+  }
+
+  void _openFilterSheet() {
+    final tempBases = {...selectedBaseLiquors};
     String tempQuery = searchQuery;
     final controller = TextEditingController(text: tempQuery);
 
@@ -205,49 +177,42 @@ class _CoctelesState extends State<Cocteles> {
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
           ),
           child: StatefulBuilder(
-            builder: (ctx, setModalState) {
+            builder: (ctx, setModal) {
               return SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Buscar y filtrar',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 252, 252, 252),)),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
-                    
 
-                    // Campo de búsqueda
+                    // Buscador por texto
                     TextField(
                       controller: controller,
                       decoration: const InputDecoration(
-                        hintText: 'Escribe un nombre, sabor, etc.',
+                        hintText: 'Buscar por nombre o palabra clave',
                         prefixIcon: Icon(Icons.search),
                         border: OutlineInputBorder(),
                       ),
-                      onChanged: (v) => setModalState(() => tempQuery = v),
+                      onChanged: (v) => setModal(() => tempQuery = v),
                     ),
 
-                    const SizedBox(height: 16),
-                    
-
-                    const SizedBox(height: 16),
-                    const Text('Etiquetas',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Color.fromARGB(255, 253, 252, 252),)),
+                    const SizedBox(height: 20),
+                    const Text('Licor base'),
                     const SizedBox(height: 6),
+
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
                       children: [
-                        for (final tag in allTags)
+                        for (final licor in _licorBaseChips)
                           FilterChip(
-                            label: Text(tag),
-                            selected: tempTags.contains(tag),
+                            label: Text(licor),
+                            selected: tempBases.contains(licor),
                             onSelected: (sel) {
-                              setModalState(() {
-                                if (sel) {
-                                  tempTags.add(tag);
-                                } else {
-                                  tempTags.remove(tag);
-                                }
+                              setModal(() {
+                                if (sel) tempBases.add(licor);
+                                else tempBases.remove(licor);
                               });
                             },
                           ),
@@ -260,8 +225,7 @@ class _CoctelesState extends State<Cocteles> {
                         TextButton(
                           onPressed: () {
                             setState(() {
-                              selectedTags.clear();
-                              selectedDifficulty = 'todas';
+                              selectedBaseLiquors.clear();
                               searchQuery = '';
                             });
                             Navigator.pop(ctx);
@@ -272,10 +236,9 @@ class _CoctelesState extends State<Cocteles> {
                         ElevatedButton.icon(
                           onPressed: () {
                             setState(() {
-                              selectedTags
+                              selectedBaseLiquors
                                 ..clear()
-                                ..addAll(tempTags);
-                              selectedDifficulty = tempDifficulty;
+                                ..addAll(tempBases);
                               searchQuery = tempQuery;
                             });
                             Navigator.pop(ctx);
@@ -295,121 +258,127 @@ class _CoctelesState extends State<Cocteles> {
     );
   }
 
+  Future<void> _randomOne() async {
+    setState(() => _loading = true);
+    try {
+      final rnd = await _api.random();
+      setState(() {
+        _catalog
+          ..clear()
+          ..add(rnd);
+        selectedBaseLiquors.clear();
+        searchQuery = '';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!_prefsLoaded) {
+    if (!_prefsLoaded || _loading) {
       return Scaffold(
-        appBar: AppBar(title: Text('Cócteles')),
-        body: Center(child: CircularProgressIndicator()),
+        appBar: AppBar(title: const Text('Cócteles')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Catálogo de etiquetas (para el sheet)
-    final allTags = {
-      for (final it in items) ...List<String>.from(it['tags'] ?? const [])
-    }.toList()
-      ..sort();
-
-    final filteredItems = items.where((it) => _passesFilters(it)).toList();
+    final filtered = _catalog.where(_passesFilters).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Cócteles"),
+        title: const Text('Cócteles'),
         actions: [
-          // Ajustes (si lo usas desde aquí)
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Buscar y filtrar',
+            onPressed: _openFilterSheet,
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Configuración',
             onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsPage()),
-              );
-              // recargar preferencias al volver
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
               final kit = await AppPrefs.getHasBarKit();
               final dif = await AppPrefs.getDifficultyFilter();
-              if (mounted) {
-                setState(() {
-                  hasBarKit = kit;
-                  difficultyFilter = dif;
-                });
-              }
+              if (!mounted) return;
+              setState(() {
+                hasBarKit = kit;
+                difficultyFilter = dif;
+              });
             },
-          ),
-          // Búsqueda + filtros unificados
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Buscar y filtrar',
-            onPressed: () => _openSearchAndFilterSheet(allTags),
           ),
         ],
       ),
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _randomOne,
+        icon: const Icon(Icons.shuffle),
+        label: const Text('Trago aleatorio'),
+      ),
+
       body: ListView.separated(
         padding: const EdgeInsets.all(12),
-        itemCount: filteredItems.length,
+        itemCount: filtered.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, i) {
-          final it = filteredItems[i];
-          return InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
+          final it = filtered[i];
+          return Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: InkWell(
+              onTap: () async {
+                var full = it;
+                final id = (it['id'] ?? '').toString();
+                if (id.isNotEmpty) {
+                  showDialog(context: context, barrierDismissible: false,
+                    builder: (_) => const Center(child: CircularProgressIndicator()));
+                  try {
+                    final det = await _api.lookupById(id);
+                    if (det != null) full = det;
+                  } finally {
+                    if (Navigator.canPop(context)) Navigator.pop(context);
+                  }
+                }
+                if (!context.mounted) return;
+                Navigator.push(context, MaterialPageRoute(
                   builder: (_) => DetalleCoctel(
-                    nombre: it["nombre"] as String,
-                    descripcion: it["descripcion"] as String,
-                    detalle: it["detalle"] as String,
-                    imagen: it["imagen"] as String,
+                    nombre: full['nombre'],
+                    descripcion: full['descripcion'],
+                    detalle: full['detalle'],
+                    imagen: full['imagen'],
                   ),
-                ),
-              );
-            },
-            child: Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ));
+              },
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        it["imagen"] as String,
-                        width: 64, height: 64, fit: BoxFit.cover,
-                      ),
+                      child: _thumb(it['imagen'] as String),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            it["nombre"] as String,
-                            style: const TextStyle(
-                              color: Color.fromARGB(255, 245, 244, 244),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
+                          Text(it['nombre'] as String,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Text(
-                            it["descripcion"] as String,
-                            style: const TextStyle(color: Color.fromARGB(255, 244, 244, 244)),
-                          ),
+                          Text(it['descripcion'] as String),
                           const SizedBox(height: 6),
                           Wrap(
                             spacing: 6,
                             runSpacing: -8,
                             children: [
                               if (it['dificultad'] != null)
-                                Chip(
-                                  label: Text("${it['dificultad']}"),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              for (final t in (it['tags'] ?? const []))
-                                Chip(
-                                  label: Text("$t"),
-                                  visualDensity: VisualDensity.compact,
-                                ),
+                                Chip(label: Text("${it['dificultad']}"),
+                                    visualDensity: VisualDensity.compact),
+                              for (final t in (it['tags'] as List? ?? const []))
+                                Chip(label: Text("$t"), visualDensity: VisualDensity.compact),
                             ],
                           ),
                         ],
@@ -441,51 +410,38 @@ class DetalleCoctel extends StatelessWidget {
     required this.imagen,
   });
 
+  Widget _hero(String path) {
+    if (path.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: path,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => const AspectRatio(
+          aspectRatio: 16/9,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 64),
+      );
+    }
+    return Image.asset(path, fit: BoxFit.cover);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          nombre,
-          style: const TextStyle(color: Color.fromARGB(255, 253, 253, 253)),
-        ),
-      ),
+      appBar: AppBar(title: Text(nombre)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(width: 8, color: const Color.fromARGB(255, 237, 236, 236)),
-              ),
-              child: Image.asset(imagen),
-            ),
+            child: _hero(imagen),
           ),
           const SizedBox(height: 16),
-          const SizedBox(height: 4),
-          Text(
-            descripcion,
-            style: const TextStyle(fontSize: 16, color: Color.fromARGB(255, 254, 254, 254)),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            "Medidas",
-            style: TextStyle(
-              color: Color.fromARGB(255, 253, 253, 253),
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(descripcion),
+          const SizedBox(height: 12),
+          const Text('Receta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Text(
-            detalle,
-            style: const TextStyle(
-              fontSize: 16,
-              height: 1.4,
-              color: Color.fromARGB(255, 248, 247, 247),
-            ),
-          ),
+          Text(detalle, style: const TextStyle(height: 1.4)),
         ],
       ),
     );
