@@ -1,9 +1,11 @@
+// lib/pages/menu.dart
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'navegation/mis_recetas.dart';
-import 'navegation/cocteles.dart'; 
-import '/api/api_service.dart'; 
-import '/models/tragos_data.dart'; 
+// Alias para evitar conflictos con DetalleCoctel
+import 'navegation/cocteles.dart' as coctel;
+import 'navegation/mis_recetas.dart' as misrecetas;
+
+import '/api/api_service.dart';
 
 class Menu extends StatefulWidget {
   const Menu({super.key, required this.title});
@@ -16,7 +18,7 @@ class Menu extends StatefulWidget {
 class _MyMenuPageState extends State<Menu> {
   @override
   Widget build(BuildContext context) {
-    var logger = Logger();
+    final logger = Logger();
     logger.d("Logger is working!");
 
     return Scaffold(
@@ -29,84 +31,86 @@ class _MyMenuPageState extends State<Menu> {
           margin: const EdgeInsets.all(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 12),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
 
-                // ======================
-                // 1) TRAGOS (catálogo)
-                // ======================
-                SizedBox(
-                  width: 400,
-                  height: 100,
-                  child: Image.asset(
-                    "assets/allDrinks.png",
-                    fit: BoxFit.contain,
+                  // ======================
+                  // 1) TRAGOS (catálogo)
+                  // ======================
+                  SizedBox(
+                    width: 400,
+                    height: 100,
+                    child: Image.asset(
+                      "assets/allDrinks.png",
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const Cocteles()),
-                    );
-                  },
-                  icon: const Icon(Icons.local_bar),
-                  label: const Text("Tragos"),
-                ),
-
-                const SizedBox(height: 24),
-
-                // ======================
-                // 2) MIS RECETAS
-                // ======================
-                SizedBox(
-                  width: 400,
-                  height: 100,
-                  child: Image.asset(
-                    "assets/Create.png",
-                    fit: BoxFit.contain,
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const coctel.Cocteles()),
+                      );
+                    },
+                    icon: const Icon(Icons.local_bar),
+                    label: const Text("Tragos"),
                   ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MisRecetas()),
-                    );
-                  },
-                  icon: const Icon(Icons.menu_book),
-                  label: const Text("Mis recetas"),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // ======================
-                // 3) TRAGO ALEATORIO
-                // ======================
-                SizedBox(
-                  width: 400,
-                  height: 100,
-                  child: Image.asset(
-                    "assets/tragos.png", // usa otra imagen si quieres
-                    fit: BoxFit.contain,
+                  // ======================
+                  // 2) MIS RECETAS
+                  // ======================
+                  SizedBox(
+                    width: 400,
+                    height: 100,
+                    child: Image.asset(
+                      "assets/Create.png",
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RandomTragoPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.shuffle),
-                  label: const Text("Trago aleatorio"),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const misrecetas.MisRecetas()),
+                      );
+                    },
+                    icon: const Icon(Icons.menu_book),
+                    label: const Text("Mis recetas"),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ======================
+                  // 3) TRAGO ALEATORIO
+                  // ======================
+                  SizedBox(
+                    width: 400,
+                    height: 100,
+                    child: Image.asset(
+                      "assets/tragos.png",
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RandomTragoPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.shuffle),
+                    label: const Text("Trago aleatorio"),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -115,8 +119,7 @@ class _MyMenuPageState extends State<Menu> {
   }
 }
 
-/// Pantalla ligera que pide 1 cóctel aleatorio y muestra el DetalleCoctel.
-/// (Se deja en el mismo archivo por comodidad.)
+/// Pantalla que pide 1 cóctel aleatorio y muestra el DetalleCoctel (definido en cocteles.dart).
 class RandomTragoPage extends StatefulWidget {
   const RandomTragoPage({super.key});
 
@@ -151,9 +154,7 @@ class _RandomTragoPageState extends State<RandomTragoPage> {
     if (_error != null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Trago aleatorio")),
-        body: Center(
-          child: Text("Error: $_error"),
-        ),
+        body: Center(child: Text("Error: $_error")),
       );
     }
 
@@ -164,9 +165,9 @@ class _RandomTragoPageState extends State<RandomTragoPage> {
       );
     }
 
-    // Cuando ya tenemos el item, mostramos directamente la vista de detalle
     final it = _item!;
-    return DetalleCoctel(
+    // Usamos el DetalleCoctel de cocteles.dart con alias para evitar ambigüedad
+    return coctel.DetalleCoctel(
       nombre: it['nombre'],
       descripcion: it['descripcion'],
       detalle: it['detalle'],
