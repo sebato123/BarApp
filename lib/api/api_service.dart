@@ -8,6 +8,19 @@ const _alcoholFlagEs = {
   'Non alcoholic': 'sin alcohol',
   'Optional alcohol': 'alcohol opcional',
 };
+const _categoryEs = {
+  'Ordinary Drink': 'trago clásico',
+  'Cocktail': 'cóctel',
+  'Milk / Float / Shake': 'batido',
+  'Other/Unknown': 'otro',
+  'Cocoa': 'bebida de cacao',
+  'Shot': 'shot',
+  'Coffee / Tea': 'café o té',
+  'Homemade Liqueur': 'licor casero',
+  'Punch / Party Drink': 'ponche o trago de fiesta',
+  'Beer': 'cerveza',
+  'Soft Drink / Soda': 'bebida sin alcohol',
+};
 
 const _glassEs = {
   'Cocktail glass': 'copa de cóctel',
@@ -196,20 +209,22 @@ Map<String, dynamic> mapCocktailFromApi(Map<String, dynamic> raw) {
   final alcoholEs = _alcoholFlagEs[alcoholic] ?? alcoholic.toLowerCase();
   final glassEs = _glassEs[glass] ?? glass.toLowerCase();
   final baseMatchesEs = _detectBaseLiquorsEs(ingredientesNombresEs);
+  final categoryEs = _categoryEs[category] ?? category.toLowerCase();
 
-  final tags = <String>[
-    if (category.isNotEmpty) category.toLowerCase(),
-    if (alcoholEs.isNotEmpty) alcoholEs,
-    if (glassEs.isNotEmpty) glassEs,
-    ...baseMatchesEs,
-  ].toSet().toList();
+  // Etiquetas básicas + licor base (ES)
+final tags = <String>[
+  if (categoryEs.isNotEmpty) categoryEs,
+  if (alcoholEs.isNotEmpty) alcoholEs,
+  if (glassEs.isNotEmpty) glassEs,
+  ...baseMatchesEs,
+].toSet().toList();
 
-  // Descripción corta en ES
-  final descripcionEs = [
-    if (category.isNotEmpty) category,
-    if (alcoholEs.isNotEmpty) alcoholEs,
-    if (glassEs.isNotEmpty) glassEs,
-  ].join(' • ');
+// Descripción corta en ES (lo que ves en la tarjeta)
+final descripcionEs = [
+  if (categoryEs.isNotEmpty) categoryEs,
+  if (alcoholEs.isNotEmpty) alcoholEs,
+  if (glassEs.isNotEmpty) glassEs,
+].join(' • ');
 
   final detalle = StringBuffer()
     ..writeln('Ingredientes:')

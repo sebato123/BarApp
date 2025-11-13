@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
+
 class MisRecetas extends StatefulWidget {
   const MisRecetas({super.key});
 
@@ -74,8 +76,14 @@ class _MisRecetasState extends State<MisRecetas> {
         title: const Text('Eliminar receta'),
         content: Text('¿Seguro quieres eliminar "${items[index]['nombre']}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Eliminar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
         ],
       ),
     );
@@ -88,8 +96,22 @@ class _MisRecetasState extends State<MisRecetas> {
   }
 
   Widget _thumb(String path) {
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        width: 64,
+        height: 64,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
+      );
+    }
     if (path.startsWith('/')) {
-      return Image.file(File(path), width: 64, height: 64, fit: BoxFit.cover);
+      return Image.file(
+        File(path),
+        width: 64,
+        height: 64,
+        fit: BoxFit.cover,
+      );
     }
     return const Icon(Icons.photo, size: 40, color: Colors.grey);
   }
@@ -133,7 +155,9 @@ class _MisRecetasState extends State<MisRecetas> {
                     return false;
                   },
                   child: Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: InkWell(
                       onTap: () {
                         Navigator.push(
@@ -164,7 +188,8 @@ class _MisRecetasState extends State<MisRecetas> {
                                   Text(
                                     it["nombre"]!,
                                     style: const TextStyle(
-                                      color: Color.fromARGB(255, 219, 223, 14),
+                                      color:
+                                          Color.fromARGB(255, 219, 223, 14),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
                                     ),
@@ -172,7 +197,8 @@ class _MisRecetasState extends State<MisRecetas> {
                                   const SizedBox(height: 4),
                                   Text(
                                     it["descripcion"]!,
-                                    style: const TextStyle(color: Colors.white),
+                                    style:
+                                        const TextStyle(color: Colors.white),
                                   ),
                                 ],
                               ),
@@ -183,8 +209,14 @@ class _MisRecetasState extends State<MisRecetas> {
                                 if (value == 'delete') _eliminar(i);
                               },
                               itemBuilder: (_) => const [
-                                PopupMenuItem(value: 'edit', child: Text('Editar')),
-                                PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Editar'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Eliminar'),
+                                ),
                               ],
                             ),
                             const Icon(Icons.chevron_right),
@@ -214,12 +246,59 @@ class DetalleCoctelLocal extends StatelessWidget {
     required this.imagen,
   });
 
+  Widget _hero(String path) {
+    // Si viene de la API (URL http/https)
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.broken_image, size: 100),
+      );
+    }
+
+    // Si es una foto local (ruta absoluta)
+    final file = File(path);
+    if (file.existsSync()) {
+      return Image.file(file, fit: BoxFit.cover);
+    }
+
+    // Si no existe o es algo raro
+    return const Icon(Icons.broken_image, size: 100);
+  }
+
+  void _share() {
+    final text = '''
+$nombre
+
+$descripcion
+
+$detalle
+''';
+
+    Share.share(
+      text.trim(),
+      subject: 'Receta de $nombre',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final file = File(imagen);
     return Scaffold(
       appBar: AppBar(
-        title: Text(nombre, style: const TextStyle(color: Color.fromARGB(255, 219, 223, 14))),
+        title: Text(
+          nombre,
+          style: const TextStyle(
+            color: Color.fromARGB(255, 219, 223, 14),
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Compartir',
+            onPressed: _share,
+            icon: const Icon(Icons.share),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -230,9 +309,7 @@ class DetalleCoctelLocal extends StatelessWidget {
               decoration: BoxDecoration(
                 border: Border.all(width: 8, color: Colors.black),
               ),
-              child: file.existsSync()
-                  ? Image.file(file, fit: BoxFit.cover)
-                  : const Icon(Icons.broken_image, size: 100),
+              child: _hero(imagen),
             ),
           ),
           const SizedBox(height: 16),
@@ -247,7 +324,10 @@ class DetalleCoctelLocal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(detalle, style: const TextStyle(fontSize: 16, height: 1.4)),
+          Text(
+            detalle,
+            style: const TextStyle(fontSize: 16, height: 1.4),
+          ),
         ],
       ),
     );
@@ -255,7 +335,11 @@ class DetalleCoctelLocal extends StatelessWidget {
 }
 
 class EditarRecetaPage extends StatefulWidget {
-  const EditarRecetaPage({super.key, this.initial, this.title = 'Agregar receta'});
+  const EditarRecetaPage({
+    super.key,
+    this.initial,
+    this.title = 'Agregar receta',
+  });
 
   final Map<String, String>? initial;
   final String title;
@@ -274,9 +358,12 @@ class _EditarRecetaPageState extends State<EditarRecetaPage> {
   @override
   void initState() {
     super.initState();
-    nombreController = TextEditingController(text: widget.initial?['nombre'] ?? '');
-    descripcionController = TextEditingController(text: widget.initial?['descripcion'] ?? '');
-    detalleController = TextEditingController(text: widget.initial?['detalle'] ?? '');
+    nombreController =
+        TextEditingController(text: widget.initial?['nombre'] ?? '');
+    descripcionController =
+        TextEditingController(text: widget.initial?['descripcion'] ?? '');
+    detalleController =
+        TextEditingController(text: widget.initial?['detalle'] ?? '');
     imagenPath = widget.initial?['imagen'];
   }
 
@@ -318,12 +405,14 @@ class _EditarRecetaPageState extends State<EditarRecetaPage> {
               TextFormField(
                 controller: nombreController,
                 decoration: const InputDecoration(labelText: "Nombre"),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
               ),
               TextFormField(
                 controller: descripcionController,
                 decoration: const InputDecoration(labelText: "Descripción"),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
               ),
               TextFormField(
                 controller: detalleController,
@@ -332,7 +421,8 @@ class _EditarRecetaPageState extends State<EditarRecetaPage> {
                   alignLabelWithHint: true,
                 ),
                 maxLines: 6,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 16),
               Center(
@@ -341,14 +431,23 @@ class _EditarRecetaPageState extends State<EditarRecetaPage> {
                     if (hasImage)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(File(imagenPath!), width: 160, height: 160, fit: BoxFit.cover),
+                        child: Image.file(
+                          File(imagenPath!),
+                          width: 160,
+                          height: 160,
+                          fit: BoxFit.cover,
+                        ),
                       )
                     else
                       Container(
                         width: 160,
                         height: 160,
                         color: Colors.black26,
-                        child: const Icon(Icons.photo_camera, size: 60, color: Colors.white70),
+                        child: const Icon(
+                          Icons.photo_camera,
+                          size: 60,
+                          color: Colors.white70,
+                        ),
                       ),
                     const SizedBox(height: 8),
                     Wrap(

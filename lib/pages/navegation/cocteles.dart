@@ -1,8 +1,11 @@
+import 'dart:convert'; 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart'; 
 import '../../config.dart';
 import '../../preferences.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class Cocteles extends StatefulWidget {
   const Cocteles({super.key});
@@ -18,7 +21,6 @@ class _CoctelesState extends State<Cocteles> {
 
   // Estado filtros
   String searchQuery = '';
-  // Usaremos este set para guardar los licores base seleccionados (chips)
   final Set<String> selectedBaseLiquors = {};
 
   // Preferencias globales
@@ -27,6 +29,9 @@ class _CoctelesState extends State<Cocteles> {
   String difficultyFilter = 'difícil';
 
   bool _loading = true;
+
+  // Favoritos (ids guardados en SharedPreferences)
+  Set<String> _favoriteIds = {};
 
   // Chips fijos de licor base (en español)
   static const List<String> _licorBaseChips = [
@@ -48,20 +53,53 @@ class _CoctelesState extends State<Cocteles> {
     _init();
   }
 
+  Future<Set<String>> _getFavoriteIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString('mis_recetas');
+    if (data == null) return {};
+    final decoded = jsonDecode(data) as List;
+    final ids = <String>{};
+    for (final e in decoded) {
+      final m = Map<String, dynamic>.from(e as Map);
+      final id = (m['id'] ?? '').toString();
+      if (id.isNotEmpty) ids.add(id);
+    }
+    return ids;
+  }
+
   Future<void> _init() async {
-    final kit = await AppPrefs.getHasBarKit();
-    final dif = await AppPrefs.getDifficultyFilter();
-    // Catálogo grande inicial (ajusta letras si quieres más/menos)
-    final data = await _api.searchByLettersBatch(['a','e','m','p','s','n','r']);
-    setState(() {
-      hasBarKit = kit;
-      difficultyFilter = dif;
-      _prefsLoaded = true;
-      _catalog
-        ..clear()
-        ..addAll(data);
-      _loading = false;
-    });
+    try {
+      if (mounted) setState(() => _loading = true);
+
+      final kit = await AppPrefs.getHasBarKit();
+      if (!mounted) return;
+
+      final dif = await AppPrefs.getDifficultyFilter();
+      if (!mounted) return;
+
+      final data = await _api.searchByLettersBatch(['a', 'e', 'm', 'p', 's', 'n', 'r']);
+      if (!mounted) return;
+
+      final favIds = await _getFavoriteIds();
+      if (!mounted) return;
+
+      setState(() {
+        hasBarKit = kit;
+        difficultyFilter = dif;
+        _prefsLoaded = true;
+        _catalog
+          ..clear()
+          ..addAll(data);
+        _favoriteIds = favIds;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error cargando catálogo: $e')),
+      );
+    }
   }
 
   // -------- Helpers búsqueda --------
@@ -129,14 +167,16 @@ class _CoctelesState extends State<Cocteles> {
       }
     }
 
-    // 2) Chips de licor base (OR: basta con que tenga al menos uno)
+    // 2) Chips de licor base (OR: al menos uno)
     if (selectedBaseLiquors.isNotEmpty) {
-      final tags = (it['tags'] as List? ?? const []).map((e) => e.toString().toLowerCase()).toSet();
+      final tags = (it['tags'] as List? ?? const [])
+          .map((e) => e.toString().toLowerCase())
+          .toSet();
       final want = selectedBaseLiquors.map((e) => e.toLowerCase()).toSet();
       if (tags.intersection(want).isEmpty) return false;
     }
 
-    // 3) Dificultad tope desde preferencias (fácil/intermedio/difícil)
+    // 3) Dificultad tope desde preferencias
     if (difficultyFilter != 'difícil') {
       const niveles = {'fácil': 1, 'intermedio': 2, 'avanzado': 3, 'difícil': 3};
       final maxLevel = niveles[difficultyFilter] ?? 3;
@@ -147,14 +187,63 @@ class _CoctelesState extends State<Cocteles> {
     return true;
   }
 
+  // -------- Guardar / quitar favorito (desde la lista) --------
+  Future<void> _toggleFavorite(Map<String, dynamic> it) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('mis_recetas');
+    final list = raw != null
+        ? (jsonDecode(raw) as List)
+            .map((e) => Map<String, String>.from(e as Map))
+            .toList()
+        : <Map<String, String>>[];
+
+    final id = (it['id'] ?? '').toString();
+    final idx = list.indexWhere((m) => m['id'] == id);
+
+    String msg;
+    if (idx >= 0) {
+      list.removeAt(idx);
+      msg = 'Quitado de Mis recetas';
+      if (mounted) {
+        setState(() {
+          _favoriteIds.remove(id);
+        });
+      }
+    } else {
+      list.add({
+        'id': id,
+        'nombre': (it['nombre'] ?? '').toString(),
+        'descripcion': (it['descripcion'] ?? '').toString(),
+        'detalle': (it['detalle'] ?? '').toString(),
+        'imagen': (it['imagen'] ?? '').toString(),
+      });
+      msg = 'Guardado en Mis recetas';
+      if (mounted) {
+        setState(() {
+          _favoriteIds.add(id);
+        });
+      }
+    }
+
+    await prefs.setString('mis_recetas', jsonEncode(list));
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   // -------- UI --------
   Widget _thumb(String path) {
     if (path.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: path,
-        width: 64, height: 64, fit: BoxFit.cover,
+        width: 64,
+        height: 64,
+        fit: BoxFit.cover,
         placeholder: (_, __) => const SizedBox(
-          width: 64, height: 64, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+          width: 64,
+          height: 64,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
         errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
       );
     }
@@ -173,7 +262,9 @@ class _CoctelesState extends State<Cocteles> {
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(
-            left: 16, right: 16, top: 8,
+            left: 16,
+            right: 16,
+            top: 8,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
           ),
           child: StatefulBuilder(
@@ -211,8 +302,11 @@ class _CoctelesState extends State<Cocteles> {
                             selected: tempBases.contains(licor),
                             onSelected: (sel) {
                               setModal(() {
-                                if (sel) tempBases.add(licor);
-                                else tempBases.remove(licor);
+                                if (sel) {
+                                  tempBases.add(licor);
+                                } else {
+                                  tempBases.remove(licor);
+                                }
                               });
                             },
                           ),
@@ -258,25 +352,6 @@ class _CoctelesState extends State<Cocteles> {
     );
   }
 
-  Future<void> _randomOne() async {
-    setState(() => _loading = true);
-    try {
-      final rnd = await _api.random();
-      setState(() {
-        _catalog
-          ..clear()
-          ..add(rnd);
-        selectedBaseLiquors.clear();
-        searchQuery = '';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!_prefsLoaded || _loading) {
@@ -301,7 +376,8 @@ class _CoctelesState extends State<Cocteles> {
             icon: const Icon(Icons.settings),
             tooltip: 'Configuración',
             onPressed: () async {
-              await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+              await Navigator.push(
+                  context, MaterialPageRoute(builder: (_) => const SettingsPage()));
               final kit = await AppPrefs.getHasBarKit();
               final dif = await AppPrefs.getDifficultyFilter();
               if (!mounted) return;
@@ -314,11 +390,7 @@ class _CoctelesState extends State<Cocteles> {
         ],
       ),
 
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _randomOne,
-        icon: const Icon(Icons.shuffle),
-        label: const Text('Trago aleatorio'),
-      ),
+      // 👉 SIN botón de "Trago aleatorio" aquí
 
       body: ListView.separated(
         padding: const EdgeInsets.all(12),
@@ -326,31 +398,47 @@ class _CoctelesState extends State<Cocteles> {
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, i) {
           final it = filtered[i];
+          final id = (it['id'] ?? '').toString();
+          final isFav = _favoriteIds.contains(id);
+
           return Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: InkWell(
               onTap: () async {
                 var full = it;
-                final id = (it['id'] ?? '').toString();
-                if (id.isNotEmpty) {
-                  showDialog(context: context, barrierDismissible: false,
-                    builder: (_) => const Center(child: CircularProgressIndicator()));
+                final cid = (it['id'] ?? '').toString();
+                if (cid.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(child: CircularProgressIndicator()),
+                  );
                   try {
-                    final det = await _api.lookupById(id);
+                    final det = await _api.lookupById(cid);
                     if (det != null) full = det;
                   } finally {
                     if (Navigator.canPop(context)) Navigator.pop(context);
                   }
                 }
                 if (!context.mounted) return;
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => DetalleCoctel(
-                    nombre: full['nombre'],
-                    descripcion: full['descripcion'],
-                    detalle: full['detalle'],
-                    imagen: full['imagen'],
+
+                // Abrimos detalle y al volver refrescamos favoritos desde prefs
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DetalleCoctel(
+                      id: (full['id'] ?? '').toString(),
+                      nombre: full['nombre'],
+                      descripcion: full['descripcion'],
+                      detalle: full['detalle'],
+                      imagen: full['imagen'],
+                    ),
                   ),
-                ));
+                );
+
+                final favIds = await _getFavoriteIds();
+                if (!mounted) return;
+                setState(() => _favoriteIds = favIds);
               },
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -365,8 +453,13 @@ class _CoctelesState extends State<Cocteles> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(it['nombre'] as String,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text(
+                            it['nombre'] as String,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           Text(it['descripcion'] as String),
                           const SizedBox(height: 6),
@@ -375,16 +468,33 @@ class _CoctelesState extends State<Cocteles> {
                             runSpacing: -8,
                             children: [
                               if (it['dificultad'] != null)
-                                Chip(label: Text("${it['dificultad']}"),
-                                    visualDensity: VisualDensity.compact),
+                                Chip(
+                                  label: Text("${it['dificultad']}"),
+                                  visualDensity: VisualDensity.compact,
+                                ),
                               for (final t in (it['tags'] as List? ?? const []))
-                                Chip(label: Text("$t"), visualDensity: VisualDensity.compact),
+                                Chip(
+                                  label: Text("$t"),
+                                  visualDensity: VisualDensity.compact,
+                                ),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => _toggleFavorite(it),
+                          icon: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            color: isFav ? Colors.red : null,
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -396,7 +506,13 @@ class _CoctelesState extends State<Cocteles> {
   }
 }
 
-class DetalleCoctel extends StatelessWidget {
+// ======================================================
+// Detalle con botón de favoritos (usable también desde
+// la opción "Trago aleatorio" del menú)
+// ======================================================
+
+class DetalleCoctel extends StatefulWidget {
+  final String id;
   final String nombre;
   final String descripcion;
   final String detalle;
@@ -404,11 +520,71 @@ class DetalleCoctel extends StatelessWidget {
 
   const DetalleCoctel({
     super.key,
+    required this.id,
     required this.nombre,
     required this.descripcion,
     required this.detalle,
     required this.imagen,
   });
+
+  @override
+  State<DetalleCoctel> createState() => _DetalleCoctelState();
+}
+
+class _DetalleCoctelState extends State<DetalleCoctel> {
+  bool _isFav = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFav();
+  }
+
+  Future<void> _loadFav() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('mis_recetas');
+    if (raw == null) return;
+    final list = (jsonDecode(raw) as List)
+        .map((e) => Map<String, String>.from(e as Map))
+        .toList();
+    final exists = list.any((m) => m['id'] == widget.id);
+    if (mounted) {
+      setState(() => _isFav = exists);
+    }
+  }
+
+  Future<void> _toggleFav() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('mis_recetas');
+    final list = raw != null
+        ? (jsonDecode(raw) as List)
+            .map((e) => Map<String, String>.from(e as Map))
+            .toList()
+        : <Map<String, String>>[];
+
+    final idx = list.indexWhere((m) => m['id'] == widget.id);
+    String msg;
+    if (idx >= 0) {
+      list.removeAt(idx);
+      msg = 'Quitado de Mis recetas';
+      if (mounted) setState(() => _isFav = false);
+    } else {
+      list.add({
+        'id': widget.id,
+        'nombre': widget.nombre,
+        'descripcion': widget.descripcion,
+        'detalle': widget.detalle,
+        'imagen': widget.imagen,
+      });
+      msg = 'Guardado en Mis recetas';
+      if (mounted) setState(() => _isFav = true);
+    }
+
+    await prefs.setString('mis_recetas', jsonEncode(list));
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 
   Widget _hero(String path) {
     if (path.startsWith('http')) {
@@ -416,7 +592,7 @@ class DetalleCoctel extends StatelessWidget {
         imageUrl: path,
         fit: BoxFit.cover,
         placeholder: (_, __) => const AspectRatio(
-          aspectRatio: 16/9,
+          aspectRatio: 16 / 9,
           child: Center(child: CircularProgressIndicator()),
         ),
         errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 64),
@@ -425,23 +601,61 @@ class DetalleCoctel extends StatelessWidget {
     return Image.asset(path, fit: BoxFit.cover);
   }
 
+  void _share() {
+    final text = '''
+${widget.nombre}
+
+${widget.descripcion}
+
+${widget.detalle}
+''';
+
+    Share.share(
+      text.trim(),
+      subject: 'Receta de ${widget.nombre}',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(nombre)),
+      appBar: AppBar(
+        title: Text(widget.nombre),
+        actions: [
+          IconButton(
+            tooltip: 'Compartir',
+            onPressed: _share,
+            icon: const Icon(Icons.share),
+          ),
+          IconButton(
+            tooltip: _isFav ? 'Quitar de Mis recetas' : 'Guardar en Mis recetas',
+            onPressed: _toggleFav,
+            icon: Icon(
+              _isFav ? Icons.favorite : Icons.favorite_border,
+              color: _isFav ? Colors.red : null,
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: _hero(imagen),
+            child: _hero(widget.imagen),
           ),
           const SizedBox(height: 16),
-          Text(descripcion),
+          Text(widget.descripcion),
           const SizedBox(height: 12),
-          const Text('Receta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const Text(
+            'Receta',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
-          Text(detalle, style: const TextStyle(height: 1.4)),
+          Text(
+            widget.detalle,
+            style: const TextStyle(height: 1.4),
+          ),
         ],
       ),
     );

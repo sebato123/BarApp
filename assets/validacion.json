@@ -1,0 +1,49 @@
+{
+  "preguntas": [
+    {
+      "titulo": "Fue fácil usar la aplicación",
+      "min": "0 = Muy difícil",
+      "max": "5 = Muy fácil"
+    },
+    {
+      "titulo": "Pudiste hacer lo que querías sin problemas",
+      "min": "0 = No pude",
+      "max": "5 = Sin problemas"
+    },
+    {
+      "titulo": "Cómo calificas la interfaz gráfica",
+      "min": "0 = Muy mala",
+      "max": "5 = Excelente"
+    },
+    {
+      "titulo": "El contenido de la aplicación es útil",
+      "min": "0 = Nada útil",
+      "max": "5 = Muy útil"
+    },
+    {
+      "titulo": "Qué tan bien el contenido se adapta a tus expectativas",
+      "min": "0 = No cumple",
+      "max": "5 = Supera expectativas"
+    },
+    {
+      "titulo": "El contenido está presentado de manera clara",
+      "min": "0 = Confuso",
+      "max": "5 = Muy claro"
+    },
+    {
+      "titulo": "Qué tan probable es que recomiendes la aplicación",
+      "min": "0 = Nada probable",
+      "max": "5 = Muy probable"
+    },
+    {
+      "titulo": "Qué tan cómodo te sentirías al compartir la aplicación",
+      "min": "0 = Nada cómodo",
+      "max": "5 = Muy cómodo"
+    },
+    {
+      "titulo": "Crees que la aplicación puede ser útil para otros",
+      "min": "0 = Nada útil",
+      "max": "5 = Muy útil"
+    }
+  ]
+}
