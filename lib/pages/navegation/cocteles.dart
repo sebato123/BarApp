@@ -54,6 +54,7 @@ class _CoctelesState extends State<Cocteles> {
   }
 
   Future<Set<String>> _getFavoriteIds() async {
+  try {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString('mis_recetas');
     if (data == null) return {};
@@ -65,7 +66,13 @@ class _CoctelesState extends State<Cocteles> {
       if (id.isNotEmpty) ids.add(id);
     }
     return ids;
+  } catch (e) {
+    // En release algunos dispositivos están tirando PlatformException aquí.
+    // Para no romper el catálogo, devolvemos un conjunto vacío y logeamos el error.
+    debugPrint('Error leyendo favoritos de SharedPreferences: $e');
+    return {};
   }
+}
 
   Future<void> _init() async {
     try {
@@ -232,23 +239,31 @@ class _CoctelesState extends State<Cocteles> {
   }
 
   // -------- UI --------
-  Widget _thumb(String path) {
-    if (path.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: path,
+ Widget _thumb(String path) {
+  debugPrint('IMG PATH = $path');        // log para revisar
+
+  if (path.isEmpty) {
+    return const Icon(Icons.broken_image, size: 40);
+  }
+
+  if (path.startsWith('http')) {
+    return CachedNetworkImage(
+      imageUrl: path,
+      width: 64,
+      height: 64,
+      fit: BoxFit.cover,
+      placeholder: (_, __) => const SizedBox(
         width: 64,
         height: 64,
-        fit: BoxFit.cover,
-        placeholder: (_, __) => const SizedBox(
-          width: 64,
-          height: 64,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
-      );
-    }
-    return Image.asset(path, width: 64, height: 64, fit: BoxFit.cover);
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
+    );
   }
+
+  // Por si alguna receta local usa asset
+  return Image.asset(path, width: 64, height: 64, fit: BoxFit.cover);
+}
 
   void _openFilterSheet() {
     final tempBases = {...selectedBaseLiquors};

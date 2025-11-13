@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
         brightness == Brightness.light ? materialTheme.light() : materialTheme.dark();
 
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'BarAPP',
       debugShowCheckedModeBanner: false,
       theme: baseTheme.copyWith(
         useMaterial3: true,

@@ -86,7 +86,7 @@ class _SettingsPageState extends State<SettingsPage> {
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: Container(
-        color: Colors.white,
+        color: const Color.fromARGB(255, 230, 228, 228),
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -162,7 +162,7 @@ class _SettingsPageState extends State<SettingsPage> {
             // Botón a modo entrenamiento
             ListTile(
               leading: const Icon(Icons.fitness_center, color: Colors.black87),
-              title: const Text('Modo entrenamiento (shaker)'),
+              title: const Text('Modo entrenamiento (shaker)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),),
               subtitle: const Text(
                 'Usa el teléfono como si fuera una coctelera para practicar el movimiento.',
                 style: TextStyle(color: Colors.black54),
@@ -181,7 +181,7 @@ class _SettingsPageState extends State<SettingsPage> {
             // Botón a guía de vasos
             ListTile(
               leading: const Icon(Icons.local_drink, color: Colors.black87),
-              title: const Text('Guía de vasos'),
+              title: const Text('Guía de vasos', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),),
               subtitle: const Text(
                 'Aprende qué es un vaso highball, chupito, copa de cóctel, etc.',
                 style: TextStyle(color: Colors.black54),
