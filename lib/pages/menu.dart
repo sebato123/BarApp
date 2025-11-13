@@ -467,51 +467,49 @@ class _ValidacionPageState extends State<ValidacionPage> {
   }
 
   Future<void> _enviarPorCorreo() async {
-    final nombre =
-        _nombreCtrl.text.trim().isEmpty ? 'No indica' : _nombreCtrl.text.trim();
-    final comentario = _comentCtrl.text.trim().isEmpty
-        ? 'Sin comentarios adicionales.'
-        : _comentCtrl.text.trim();
+  final nombre =
+      _nombreCtrl.text.trim().isEmpty ? 'No indica' : _nombreCtrl.text.trim();
+  final comentario = _comentCtrl.text.trim().isEmpty
+      ? 'Sin comentarios adicionales.'
+      : _comentCtrl.text.trim();
 
-    final body = StringBuffer()
-      ..writeln('Cuestionario de usabilidad - BarMaster')
-      ..writeln('======================================')
-      ..writeln('Nombre: $nombre')
-      ..writeln();
+  final body = StringBuffer()
+    ..writeln('Cuestionario de usabilidad - BarMaster')
+    ..writeln('======================================')
+    ..writeln('Nombre: $nombre')
+    ..writeln();
 
-    for (int i = 0; i < _preguntas.length; i++) {
-      final p = _preguntas[i];
-      body.writeln(
-        '${i + 1}) ${p['titulo']} => ${_valores[i].round()} / 5',
-      );
-    }
-
-    body
-      ..writeln()
-      ..writeln('Comentario adicional:')
-      ..writeln(comentario)
-      ..writeln()
-      ..writeln('Gracias por tu tiempo');
-
-    final uri = Uri(
-      scheme: 'mailto',
-      path: _destinoCorreo,
-      query: {
-        'subject': 'Cuestionario de usabilidad - BarMaster',
-        'body': body.toString(),
-      }.entries.map((e) {
-        return '${Uri.encodeQueryComponent(e.key)}='
-            '${Uri.encodeQueryComponent(e.value)}';
-      }).join('&'),
+  for (int i = 0; i < _preguntas.length; i++) {
+    final p = _preguntas[i];
+    body.writeln(
+      '${i + 1}) ${p['titulo']} => ${_valores[i].round()} / 5',
     );
-
-    if (!await launchUrl(uri)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir la app de correo.')),
-      );
-    }
   }
+
+  body
+    ..writeln()
+    ..writeln('Comentario adicional:')
+    ..writeln(comentario)
+    ..writeln()
+    ..writeln('Gracias por tu tiempo');
+
+  // Usa queryParameters, sin hacer encode “a mano”
+  final uri = Uri(
+    scheme: 'mailto',
+    path: _destinoCorreo,
+    queryParameters: {
+      'subject': 'Cuestionario de usabilidad - BarMaster',
+      'body': body.toString(),
+    },
+  );
+
+  if (!await launchUrl(uri)) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No se pudo abrir la app de correo.')),
+    );
+  }
+}
 
   Widget _sliderPregunta(int index) {
     final p = _preguntas[index];

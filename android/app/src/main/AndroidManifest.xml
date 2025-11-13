@@ -2,15 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.bar_app">
 
-    <!-- PERMISOS -->
+    <!-- INTERNET: para la API y las imágenes -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- CÁMARA: para tomar fotos -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- PERMISOS DE GALERÍA (elige según tu targetSdk) -->
+    <!-- Si tu targetSdkVersion < 33 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- Si targetSdkVersion >= 33 (Android 13+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:name="${applicationName}"
-        android:label="bar_app"
+        android:label="BarApp"
         android:icon="@mipmap/launcher_icon"
         android:usesCleartextTraffic="true">
 
