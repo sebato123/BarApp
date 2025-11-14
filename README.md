@@ -7,8 +7,9 @@ Nuestro proyecto corresponde a una aplicacion cross-plataform que permite a los 
 - Los usuarios podran navegar por una lista de recetas para poder escoger que receta quieran hacer dependiendo de lo que tengan disponible.
 - Los usuarios podran añadir recetas en caso de no estar las que quiera probar o añadir alguna creacion propia.
 - La aplicacion tiene la opcion para filtrar si se tienen las herramientas (Mezclador, colador, etc), en caso de no poseerlas, no se mostraran tragos que requieran de estas, a menos que sea reemplazables.
-- Se mostraran tragos que calcen con las prefrencias del usuario.
 - El usuario podra buscar tragos por medio de filtros.
+- El usuario podra practicar como usar un shaker, y ademas conocer sobre los vasos que se usan.
+- El usuario podra compartir alguna receta que le haya gustado, al igual que agregarla en favoritos para que aparezca en la opcion de sus tragos.
 - El usuario tendra la posibilidad de filtrar por dificultad.
 - La aplicacion tendra descripcion e imagenes de cada trago.
 - La aplicacion debe garantizar la seguridad de los datos resguardando las cuentas de usuarios y derechos de autor de cada obra realizada por los usuarios a traves de todos los medios de difusion.
@@ -24,23 +25,40 @@ Nuestro proyecto corresponde a una aplicacion cross-plataform que permite a los 
 
 ```mermaid
 mindmap
-  root((Home))
-    Todos los tragos
-      Lista de tragos
-      Descripción
-    Cócteles
-      Lista de cócteles
-      Descripción
-    Destilados
-      Lista de destilados
-      Descripción
-    Mis recetas
-      Formulario para añadir tragos
-      Lista de recetas
-      Descripción
+  root((Menú))
+    Tragos
+      Catálogo filtrado por preferencias
+      Búsqueda y filtros por licor base
+      Detalle del cóctel
+      Agregar/Quitar de favoritos
+    Mis tragos
+      Crear receta con foto
+      Guardar/editar/eliminar recetas
+      Ver detalle de receta creada
+    Trago aleatorio
+      Obtención de cóctel aleatorio desde API
+      Vista de detalle
+    Modo entrenamiento
+      Detección de movimiento (shaker)
+      Práctica guiada
+    Guía de vasos
+      Tipos de vasos
+      Descripción y uso
+    Preferencias
+      Nivel de dificultad
+      Indicar si tiene kit de bar
+      Vista en lista o grilla
+      Mostrar/ocultar chips informativos
+    Validación de la app
+      Cuestionario de usabilidad
+      Envío por correo
+
 
 ```
 
 
-
+Proyecto 1
 Link al video: https://studio.youtube.com/video/Vqkdb-f8g7Y/edit
+
+Proyecto 2
+Link al video: 
