@@ -25,33 +25,21 @@ Nuestro proyecto corresponde a una aplicacion cross-plataform que permite a los 
 
 ```mermaid
 mindmap
-  root((Menú))
+  root((BarMaster))
     Tragos
-      Catálogo filtrado por preferencias
-      Búsqueda y filtros por licor base
+      Catálogo filtrado
       Detalle del cóctel
-      Agregar/Quitar de favoritos
-    Mis tragos
+      Favoritos
+    Mis recetas
       Crear receta con foto
-      Guardar/editar/eliminar recetas
-      Ver detalle de receta creada
+      Ver y editar
     Trago aleatorio
-      Obtención de cóctel aleatorio desde API
-      Vista de detalle
-    Modo entrenamiento
-      Detección de movimiento (shaker)
-      Práctica guiada
+      Cargar cóctel sorpresa
     Guía de vasos
-      Tipos de vasos
-      Descripción y uso
-    Preferencias
-      Nivel de dificultad
-      Indicar si tiene kit de bar
-      Vista en lista o grilla
-      Mostrar/ocultar chips informativos
-    Validación de la app
-      Cuestionario de usabilidad
-      Envío por correo
+      Tipos y usos
+    Modo entrenamiento
+      Agitar el shaker con acelerómetro
+
 
 
 ```
