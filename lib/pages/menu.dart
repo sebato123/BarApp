@@ -1,19 +1,20 @@
 // lib/pages/menu.dart
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:logger/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Alias para evitar conflictos con DetalleCoctel
+// Alias para evitar conflictos
 import 'navegation/cocteles.dart' as coctel;
 import 'navegation/mis_recetas.dart' as misrecetas;
 
 import '/api/api_service.dart';
-import '../preferences.dart'; // AppPrefs
-import '../config.dart'; // <- NUEVO: pantalla de configuración
+import '../preferences.dart';
+import '../config.dart'; // SettingsPage
+import 'navegation/training_mode.dart';
+import '/pages/navegation/glass_guide.dart';
 
 class Menu extends StatefulWidget {
   const Menu({super.key, required this.title});
@@ -32,6 +33,9 @@ class _MyMenuPageState extends State<Menu> {
     _runOnboardingOnce();
   }
 
+  // ===========================
+  // ONBOARDING (solo 1 vez)
+  // ===========================
   Future<void> _runOnboardingOnce() async {
     if (_onboardingChecked) return;
 
@@ -57,7 +61,6 @@ class _MyMenuPageState extends State<Menu> {
               title: const Text('Configurar preferencias'),
               content: SingleChildScrollView(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
@@ -66,7 +69,7 @@ class _MyMenuPageState extends State<Menu> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Por ejemplo: coctelera, colador, cuchara y medidor.',
+                      'Coctelera, colador, cuchara, medidor, etc.',
                       style: TextStyle(fontSize: 13),
                     ),
                     RadioListTile<bool>(
@@ -83,7 +86,7 @@ class _MyMenuPageState extends State<Menu> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Nivel de dificultad de los tragos',
+                      'Nivel de dificultad:',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     RadioListTile<String>(
@@ -133,6 +136,237 @@ class _MyMenuPageState extends State<Menu> {
     );
   }
 
+  // ===========================
+  //  DRAWER LATERAL
+  // ===========================
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+
+          DrawerHeader(
+            decoration: const BoxDecoration(color: Colors.black87),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text("BarMaster",
+                    style: TextStyle(fontSize: 24, color: Colors.white)),
+                SizedBox(height: 8),
+                Text("Menú principal",
+                    style: TextStyle(fontSize: 14, color: Colors.white70)),
+              ],
+            ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.fitness_center),
+            title: const Text("Modo entrenamiento (shaker)"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TrainingModePage()),
+              );
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.local_drink),
+            title: const Text("Guía de vasos"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GlassGuidePage()),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text("Preferencias"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text("Acerca de"),
+            onTap: () {
+              Navigator.pop(context);
+              _showAboutDialog(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Popup Acerca de
+  void _showAboutDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Acerca de BarMaster'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "BarMaster v1.0.0",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text("Creado por: Sebastian Oñate\n"),
+              Text(
+                "Aplicación para explorar tragos, aprender recetas "
+                "y guardar tus favoritos.",
+              ),
+              SizedBox(height: 8),
+              Text(
+                "Funciones principales:",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                "• Buscar y filtrar cócteles por licor base.\n"
+                "• Ver dificultad, ingredientes y preparación.\n"
+                "• Guardar tragos favoritos.\n"
+                "• Crear tus propias recetas con fotos.\n"
+                "• Modo entrenamiento para practicar el uso del shaker.\n"
+                "• Guía visual de vasos de coctelería.",
+              ),
+              SizedBox(height: 12),
+              Text(
+                "API utilizada: TheCocktailDB\n"
+                "Uso recomendado: personal / educativo",
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              SizedBox(height: 16),
+              Text(
+                "Si estás participando en la validación de la app, "
+                "puedes responder el cuestionario de usabilidad "
+                "para enviar tus respuestas por correo.",
+                style: TextStyle(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);        // cierro el diálogo
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ValidacionPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.rate_review),
+            label: const Text('Encuesta de validación'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+    // ===========================
+  //  CARD REUTILIZABLE DEL MENÚ
+  // ===========================
+  Widget _buildMenuCard({
+  required BuildContext context,
+  required String imageAsset,
+  required String title,
+  required String subtitle,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8FFF6),   // 🌿 color amigable estilo bar
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Imagen
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset(
+              imageAsset,
+              width: 90,
+              height: 70,
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Texto flex
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,  // 🔥 texto negro
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black.withOpacity(0.75), // gris oscuro
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Flecha
+          const Icon(
+            Icons.chevron_right,
+            color: Colors.black87,     // flecha negra
+            size: 28,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+  // ===========================
+  //  INTERFAZ PRINCIPAL
+  // ===========================
   @override
   Widget build(BuildContext context) {
     final logger = Logger();
@@ -142,85 +376,8 @@ class _MyMenuPageState extends State<Menu> {
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(120, 0, 0, 0),
         title: Text(widget.title),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            tooltip: "Acerca de",
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) {
-                  return AlertDialog(
-                    title: const Text('Acerca de BarMaster'),
-                    content: const SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "BarMaster v1.0.0",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 8),
-                          Text("Creado por: Sebastian Oñate\n"),
-                          Text(
-                            "Aplicación para explorar tragos, aprender recetas "
-                            "y guardar tus favoritos.",
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            "Funciones principales:",
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            "• Buscar y filtrar cócteles por licor base.\n"
-                            "• Ver dificultad, ingredientes y preparación.\n"
-                            "• Guardar tragos favoritos.\n"
-                            "• Crear tus propias recetas con fotos.\n"
-                            "• Modo entrenamiento para practicar el uso del shaker.\n"
-                            "• Guía visual de vasos de coctelería.",
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            "API utilizada: TheCocktailDB\n"
-                            "Uso recomendado: personal / educativo",
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            "Si estás participando en la validación de la app, "
-                            "puedes responder el cuestionario de usabilidad "
-                            "para enviar tus respuestas por correo.",
-                            style: TextStyle(fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cerrar'),
-                      ),
-                      FilledButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ValidacionPage(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.rate_review),
-                        label: const Text('Encuesta de validación'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
-        ],
       ),
+      drawer: _buildDrawer(context),
       body: Center(
         child: Card(
           margin: const EdgeInsets.all(16),
@@ -228,22 +385,16 @@ class _MyMenuPageState extends State<Menu> {
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(height: 12),
-
-                  // 1) TRAGOS
-                  SizedBox(
-                    width: 400,
-                    height: 100,
-                    child: Image.asset(
-                      "assets/allDrinks.png",
-                      fit: BoxFit.contain,
-                    ),
-                  ),
                   const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
+
+                  // === TRAGOS ===
+                  _buildMenuCard(
+                    context: context,
+                    imageAsset: "assets/allDrinks.png",
+                    title: "Tragos",
+                    subtitle: "Explora el catálogo de cócteles filtrados según tus preferencias.",
+                    onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -251,24 +402,15 @@ class _MyMenuPageState extends State<Menu> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.local_bar),
-                    label: const Text("Tragos"),
                   ),
 
-                  const SizedBox(height: 24),
-
-                  // 2) MIS RECETAS
-                  SizedBox(
-                    width: 400,
-                    height: 100,
-                    child: Image.asset(
-                      "assets/Create.png",
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
+                  // === MIS RECETAS ===
+                  _buildMenuCard(
+                    context: context,
+                    imageAsset: "assets/Create.png",
+                    title: "Mis tragos",
+                    subtitle: "Guarda y edita tus propias recetas con foto.",
+                    onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -276,24 +418,15 @@ class _MyMenuPageState extends State<Menu> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.menu_book),
-                    label: const Text("Mis tragos"),
                   ),
 
-                  const SizedBox(height: 24),
-
-                  // 3) TRAGO ALEATORIO
-                  SizedBox(
-                    width: 400,
-                    height: 100,
-                    child: Image.asset(
-                      "assets/tragos.png",
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
+                  // === TRAGO ALEATORIO ===
+                  _buildMenuCard(
+                    context: context,
+                    imageAsset: "assets/tragos.png",
+                    title: "Trago aleatorio",
+                    subtitle: "Déjate sorprender con un cóctel al azar.",
+                    onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -301,34 +434,6 @@ class _MyMenuPageState extends State<Menu> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.shuffle),
-                    label: const Text("Trago aleatorio"),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 4) CONFIGURACIÓN / PREFERENCIAS
-                  SizedBox(
-                    width: 400,
-                    height: 100,
-                    child: Icon(
-                      Icons.settings,
-                      size: 72,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SettingsPage(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: const Text("Preferencias"),
                   ),
                 ],
               ),
@@ -340,8 +445,10 @@ class _MyMenuPageState extends State<Menu> {
   }
 }
 
-/// Pantalla que pide 1 cóctel aleatorio al API y muestra el DetalleCoctel
-/// definido en cocteles.dart
+
+// ===============================
+// Pantalla Trago Aleatorio
+// ===============================
 class RandomTragoPage extends StatefulWidget {
   const RandomTragoPage({super.key});
 
@@ -605,4 +712,5 @@ class _ValidacionPageState extends State<ValidacionPage> {
       ),
     );
   }
+  
 }

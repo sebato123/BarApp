@@ -1,14 +1,17 @@
-import 'dart:convert'; 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shared_preferences/shared_preferences.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../../config.dart';
 import '../../preferences.dart';
 import '../../api/api_service.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../config.dart'; // <-- ajusta ruta si es necesario
 
 class Cocteles extends StatefulWidget {
   const Cocteles({super.key});
+
   @override
   State<Cocteles> createState() => _CoctelesState();
 }
@@ -27,6 +30,8 @@ class _CoctelesState extends State<Cocteles> {
   bool _prefsLoaded = false;
   bool hasBarKit = false;
   String difficultyFilter = 'difícil';
+  bool useGridView = false;
+  bool showInfoChips = true;
 
   bool _loading = true;
 
@@ -54,25 +59,23 @@ class _CoctelesState extends State<Cocteles> {
   }
 
   Future<Set<String>> _getFavoriteIds() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString('mis_recetas');
-    if (data == null) return {};
-    final decoded = jsonDecode(data) as List;
-    final ids = <String>{};
-    for (final e in decoded) {
-      final m = Map<String, dynamic>.from(e as Map);
-      final id = (m['id'] ?? '').toString();
-      if (id.isNotEmpty) ids.add(id);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = prefs.getString('mis_recetas');
+      if (data == null) return {};
+      final decoded = jsonDecode(data) as List;
+      final ids = <String>{};
+      for (final e in decoded) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final id = (m['id'] ?? '').toString();
+        if (id.isNotEmpty) ids.add(id);
+      }
+      return ids;
+    } catch (e) {
+      debugPrint('Error leyendo favoritos de SharedPreferences: $e');
+      return {};
     }
-    return ids;
-  } catch (e) {
-    // En release algunos dispositivos están tirando PlatformException aquí.
-    // Para no romper el catálogo, devolvemos un conjunto vacío y logeamos el error.
-    debugPrint('Error leyendo favoritos de SharedPreferences: $e');
-    return {};
   }
-}
 
   Future<void> _init() async {
     try {
@@ -84,7 +87,15 @@ class _CoctelesState extends State<Cocteles> {
       final dif = await AppPrefs.getDifficultyFilter();
       if (!mounted) return;
 
-      final data = await _api.searchByLettersBatch(['a', 'e', 'm', 'p', 's', 'n', 'r']);
+      final grid = await AppPrefs.getUseGridView();
+      if (!mounted) return;
+
+      final chips = await AppPrefs.getShowInfoChips();
+      if (!mounted) return;
+
+      final data = await _api.searchByLettersBatch(
+        ['a', 'e', 'm', 'p', 's', 'n', 'r'],
+      );
       if (!mounted) return;
 
       final favIds = await _getFavoriteIds();
@@ -93,6 +104,8 @@ class _CoctelesState extends State<Cocteles> {
       setState(() {
         hasBarKit = kit;
         difficultyFilter = dif;
+        useGridView = grid;
+        showInfoChips = chips;
         _prefsLoaded = true;
         _catalog
           ..clear()
@@ -112,9 +125,20 @@ class _CoctelesState extends State<Cocteles> {
   // -------- Helpers búsqueda --------
   String _normalize(String s) {
     const mapa = {
-      'á': 'a','é': 'e','í': 'i','ó': 'o','ú': 'u','ü': 'u',
-      'Á': 'a','É': 'e','Í': 'i','Ó': 'o','Ú': 'u','Ü': 'u',
-      'ñ': 'n','Ñ': 'n',
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'ü': 'u',
+      'Á': 'a',
+      'É': 'e',
+      'Í': 'i',
+      'Ó': 'o',
+      'Ú': 'u',
+      'Ü': 'u',
+      'ñ': 'n',
+      'Ñ': 'n',
     };
     final sb = StringBuffer();
     for (final ch in s.trim().toLowerCase().runes) {
@@ -150,7 +174,8 @@ class _CoctelesState extends State<Cocteles> {
   bool _containsFuzzy(String haystack, String needle) {
     if (haystack.contains(needle)) return true;
     if (needle.length >= 4) {
-      final words = haystack.split(RegExp(r'[^a-z0-9]+')).where((w) => w.isNotEmpty);
+      final words =
+          haystack.split(RegExp(r'[^a-z0-9]+')).where((w) => w.isNotEmpty);
       for (final w in words) {
         if (_lev(w, needle) <= 1) return true;
       }
@@ -185,7 +210,12 @@ class _CoctelesState extends State<Cocteles> {
 
     // 3) Dificultad tope desde preferencias
     if (difficultyFilter != 'difícil') {
-      const niveles = {'fácil': 1, 'intermedio': 2, 'avanzado': 3, 'difícil': 3};
+      const niveles = {
+        'fácil': 1,
+        'intermedio': 2,
+        'avanzado': 3,
+        'difícil': 3,
+      };
       final maxLevel = niveles[difficultyFilter] ?? 3;
       final itemLevel = niveles[(it['dificultad'] ?? 'fácil')] ?? 1;
       if (itemLevel > maxLevel) return false;
@@ -194,7 +224,7 @@ class _CoctelesState extends State<Cocteles> {
     return true;
   }
 
-  // -------- Guardar / quitar favorito (desde la lista) --------
+  // -------- Guardar / quitar favorito --------
   Future<void> _toggleFavorite(Map<String, dynamic> it) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('mis_recetas');
@@ -238,33 +268,216 @@ class _CoctelesState extends State<Cocteles> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  // -------- UI --------
- Widget _thumb(String path) {
-  debugPrint('IMG PATH = $path');        // log para revisar
+  // -------- UI helpers --------
+  Widget _thumb(String path) {
+    debugPrint('IMG PATH = $path');
 
-  if (path.isEmpty) {
-    return const Icon(Icons.broken_image, size: 40);
-  }
+    if (path.isEmpty) {
+      return const Icon(Icons.broken_image, size: 40);
+    }
 
-  if (path.startsWith('http')) {
-    return CachedNetworkImage(
-      imageUrl: path,
+    if (path.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: path,
+        width: 64,
+        height: 64,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => const SizedBox(
+          width: 64,
+          height: 64,
+          child: Center(
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+        errorWidget: (_, __, ___) =>
+            const Icon(Icons.broken_image, size: 40),
+      );
+    }
+
+    // Por si alguna receta local usa asset
+    return Image.asset(
+      path,
       width: 64,
       height: 64,
       fit: BoxFit.cover,
-      placeholder: (_, __) => const SizedBox(
-        width: 64,
-        height: 64,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
     );
   }
 
-  // Por si alguna receta local usa asset
-  return Image.asset(path, width: 64, height: 64, fit: BoxFit.cover);
-}
+  Widget _buildCoctelCard(Map<String, dynamic> it) {
+    final id = (it['id'] ?? '').toString();
+    final isFav = _favoriteIds.contains(id);
 
+    final contentChips = showInfoChips
+        ? Wrap(
+            spacing: 6,
+            runSpacing: -8,
+            children: [
+              if (it['dificultad'] != null)
+                Chip(
+                  label: Text("${it['dificultad']}"),
+                  visualDensity: VisualDensity.compact,
+                ),
+              for (final t in (it['tags'] as List? ?? const []))
+                Chip(
+                  label: Text("$t"),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          )
+        : const SizedBox.shrink();
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () async {
+          var full = it;
+          final cid = (it['id'] ?? '').toString();
+          if (cid.isNotEmpty) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) =>
+                  const Center(child: CircularProgressIndicator()),
+            );
+            try {
+              final det = await _api.lookupById(cid);
+              if (det != null) full = det;
+            } finally {
+              if (Navigator.canPop(context)) Navigator.pop(context);
+            }
+          }
+          if (!context.mounted) return;
+
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DetalleCoctel(
+                id: (full['id'] ?? '').toString(),
+                nombre: full['nombre'],
+                descripcion: full['descripcion'],
+                detalle: full['detalle'],
+                imagen: full['imagen'],
+              ),
+            ),
+          );
+
+          final favIds = await _getFavoriteIds();
+          if (!mounted) return;
+          setState(() => _favoriteIds = favIds);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _thumb(it['imagen'] as String),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      it['nombre'] as String,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(it['descripcion'] as String),
+                    const SizedBox(height: 6),
+                    contentChips,
+                  ],
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () => _toggleFavorite(it),
+                    icon: Icon(
+                      isFav ? Icons.favorite : Icons.favorite_border,
+                      color: isFav ? Colors.red : null,
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+Widget _buildCoctelGridItem(Map<String, dynamic> it) {
+  final id = (it['id'] ?? '').toString();
+  final isFav = _favoriteIds.contains(id);
+
+  return InkWell(
+    onTap: () async {
+      var full = it;
+      final cid = (it['id'] ?? '').toString();
+
+      if (cid.isNotEmpty) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()),
+        );
+
+        try {
+          final det = await _api.lookupById(cid);
+          if (det != null) full = det;
+        } finally {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+        }
+      }
+
+      if (!context.mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetalleCoctel(
+            id: (full['id'] ?? '').toString(),
+            nombre: full['nombre'],
+            descripcion: full['descripcion'],
+            detalle: full['detalle'],
+            imagen: full['imagen'],
+          ),
+        ),
+      );
+
+      final favIds = await _getFavoriteIds();
+      if (mounted) setState(() => _favoriteIds = favIds);
+    },
+    child: Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: _thumb(it['imagen'] as String),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            child: Text(
+              it['nombre'] as String,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   void _openFilterSheet() {
     final tempBases = {...selectedBaseLiquors};
     String tempQuery = searchQuery;
@@ -288,11 +501,12 @@ class _CoctelesState extends State<Cocteles> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Buscar y filtrar',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Buscar y filtrar',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 12),
-
-                    // Buscador por texto
                     TextField(
                       controller: controller,
                       decoration: const InputDecoration(
@@ -302,11 +516,9 @@ class _CoctelesState extends State<Cocteles> {
                       ),
                       onChanged: (v) => setModal(() => tempQuery = v),
                     ),
-
                     const SizedBox(height: 20),
                     const Text('Licor base'),
                     const SizedBox(height: 6),
-
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
@@ -327,7 +539,6 @@ class _CoctelesState extends State<Cocteles> {
                           ),
                       ],
                     ),
-
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -392,129 +603,46 @@ class _CoctelesState extends State<Cocteles> {
             tooltip: 'Configuración',
             onPressed: () async {
               await Navigator.push(
-                  context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              );
               final kit = await AppPrefs.getHasBarKit();
               final dif = await AppPrefs.getDifficultyFilter();
+              final grid = await AppPrefs.getUseGridView();
+              final chips = await AppPrefs.getShowInfoChips();
               if (!mounted) return;
               setState(() {
                 hasBarKit = kit;
                 difficultyFilter = dif;
+                useGridView = grid;
+                showInfoChips = chips;
               });
             },
           ),
         ],
       ),
-
-      // 👉 SIN botón de "Trago aleatorio" aquí
-
-      body: ListView.separated(
+      body: useGridView
+    ? GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: filtered.length,
+        itemBuilder: (context, i) {
+          final it = filtered[i];
+          return _buildCoctelGridItem(it);   // GRILLA SIMPLE
+        },
+      )
+    : ListView.separated(
         padding: const EdgeInsets.all(12),
         itemCount: filtered.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, i) {
           final it = filtered[i];
-          final id = (it['id'] ?? '').toString();
-          final isFav = _favoriteIds.contains(id);
-
-          return Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: InkWell(
-              onTap: () async {
-                var full = it;
-                final cid = (it['id'] ?? '').toString();
-                if (cid.isNotEmpty) {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (_) => const Center(child: CircularProgressIndicator()),
-                  );
-                  try {
-                    final det = await _api.lookupById(cid);
-                    if (det != null) full = det;
-                  } finally {
-                    if (Navigator.canPop(context)) Navigator.pop(context);
-                  }
-                }
-                if (!context.mounted) return;
-
-                // Abrimos detalle y al volver refrescamos favoritos desde prefs
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DetalleCoctel(
-                      id: (full['id'] ?? '').toString(),
-                      nombre: full['nombre'],
-                      descripcion: full['descripcion'],
-                      detalle: full['detalle'],
-                      imagen: full['imagen'],
-                    ),
-                  ),
-                );
-
-                final favIds = await _getFavoriteIds();
-                if (!mounted) return;
-                setState(() => _favoriteIds = favIds);
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: _thumb(it['imagen'] as String),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            it['nombre'] as String,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(it['descripcion'] as String),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: -8,
-                            children: [
-                              if (it['dificultad'] != null)
-                                Chip(
-                                  label: Text("${it['dificultad']}"),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              for (final t in (it['tags'] as List? ?? const []))
-                                Chip(
-                                  label: Text("$t"),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          onPressed: () => _toggleFavorite(it),
-                          icon: Icon(
-                            isFav ? Icons.favorite : Icons.favorite_border,
-                            color: isFav ? Colors.red : null,
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+          return _buildCoctelCard(it);       // LISTA COMPLETA
         },
       ),
     );
@@ -522,8 +650,7 @@ class _CoctelesState extends State<Cocteles> {
 }
 
 // ======================================================
-// Detalle con botón de favoritos (usable también desde
-// la opción "Trago aleatorio" del menú)
+// Detalle con botón de favoritos
 // ======================================================
 
 class DetalleCoctel extends StatefulWidget {
@@ -610,7 +737,8 @@ class _DetalleCoctelState extends State<DetalleCoctel> {
           aspectRatio: 16 / 9,
           child: Center(child: CircularProgressIndicator()),
         ),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 64),
+        errorWidget: (_, __, ___) =>
+            const Icon(Icons.broken_image, size: 64),
       );
     }
     return Image.asset(path, fit: BoxFit.cover);
@@ -643,7 +771,8 @@ ${widget.detalle}
             icon: const Icon(Icons.share),
           ),
           IconButton(
-            tooltip: _isFav ? 'Quitar de Mis recetas' : 'Guardar en Mis recetas',
+            tooltip:
+                _isFav ? 'Quitar de Mis recetas' : 'Guardar en Mis recetas',
             onPressed: _toggleFav,
             icon: Icon(
               _isFav ? Icons.favorite : Icons.favorite_border,
