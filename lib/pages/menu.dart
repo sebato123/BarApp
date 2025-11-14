@@ -150,7 +150,7 @@ class _MyMenuPageState extends State<Menu> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                Text("BarMaster",
+                Text("BarApp",
                     style: TextStyle(fontSize: 24, color: Colors.white)),
                 SizedBox(height: 8),
                 Text("Menú principal",
@@ -218,13 +218,13 @@ class _MyMenuPageState extends State<Menu> {
     context: context,
     builder: (ctx) {
       return AlertDialog(
-        title: const Text('Acerca de BarMaster'),
+        title: const Text('Acerca de BarApp'),
         content: const SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "BarMaster v1.0.0",
+                "BarApp v1.0.0",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
@@ -581,7 +581,7 @@ class _ValidacionPageState extends State<ValidacionPage> {
       : _comentCtrl.text.trim();
 
   final body = StringBuffer()
-    ..writeln('Cuestionario de usabilidad - BarMaster')
+    ..writeln('Cuestionario de usabilidad - BarApp')
     ..writeln('======================================')
     ..writeln('Nombre: $nombre')
     ..writeln();
@@ -605,7 +605,7 @@ class _ValidacionPageState extends State<ValidacionPage> {
     scheme: 'mailto',
     path: _destinoCorreo,
     queryParameters: {
-      'subject': 'Cuestionario de usabilidad - BarMaster',
+      'subject': 'Cuestionario de usabilidad - BarApp',
       'body': body.toString(),
     },
   );
