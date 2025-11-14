@@ -49,4 +49,4 @@ Proyecto 1
 Link al video: https://studio.youtube.com/video/Vqkdb-f8g7Y/edit
 
 Proyecto 2
-Link al video: 
+Link al video: https://www.youtube.com/watch?v=_vqGlooLmiY
